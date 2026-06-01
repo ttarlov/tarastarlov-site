@@ -89,6 +89,11 @@
   @media (max-aspect-ratio: 7/5){
     .nm-full{display:none}
     .nm-short{display:inline}
+    /* monogram view: re-center sun + T·T on the true middle (720) since the
+       cropped scene centers there, not on the desktop sun position (700) */
+    #sun, #sunGlow{cx:720px}
+    #nmT1{x:632px}
+    #nmT2{x:808px}
   }
 
   /* HUD / telemetry overlay */
@@ -265,7 +270,7 @@
   .foot-in h2{font-family:"Syne",sans-serif;font-weight:800;
     font-size:clamp(34px,7vw,90px);text-transform:uppercase;line-height:.9;letter-spacing:-.02em}
   .foot-in h2 em{color:var(--teal);font-style:normal}
-  .links{display:flex;gap:24px;font-family:"Space Mono",monospace;font-size:13px;
+  .links{display:flex;flex-wrap:wrap;gap:16px 24px;font-family:"Space Mono",monospace;font-size:13px;
     letter-spacing:.1em;text-transform:uppercase}
   .links a{color:var(--cream);text-decoration:none;border-bottom:2px solid transparent;
     padding-bottom:3px;transition:.3s}
@@ -324,9 +329,9 @@
               style="font-family:'Syne',sans-serif;font-weight:800;font-size:72px;letter-spacing:-2px">TARAS</text>
         <text class="nm-full" x="788" y="386" text-anchor="start" fill="#fbe9c8"
               style="font-family:'Syne',sans-serif;font-weight:800;font-size:72px;letter-spacing:-2px">TARLOV</text>
-        <text class="nm-short" x="616" y="394" text-anchor="end" fill="#fbe9c8"
+        <text id="nmT1" class="nm-short" x="616" y="394" text-anchor="end" fill="#fbe9c8"
               style="font-family:'Syne',sans-serif;font-weight:800;font-size:96px;letter-spacing:-2px">T</text>
-        <text class="nm-short" x="784" y="394" text-anchor="start" fill="#fbe9c8"
+        <text id="nmT2" class="nm-short" x="784" y="394" text-anchor="start" fill="#fbe9c8"
               style="font-family:'Syne',sans-serif;font-weight:800;font-size:96px;letter-spacing:-2px">T</text>
         <circle id="sun" cx="700" cy="360" r="64" fill="#ffe9bd"/>
       </g>
@@ -538,8 +543,7 @@
            <source type="image/webp" srcset="${ss('webp')}" sizes="${sizesAttr}">
            <img src="${base}${p.id}-${Math.min(960, max)}.webp" alt="${p.alt}"
                 width="${p.w}" height="${p.h}" loading="lazy" decoding="async">
-         </picture>
-         <span class="cap">${p.alt}</span>`;
+         </picture>`;
       const img = a.querySelector('img');
       const reveal = () => a.classList.add('loaded');
       img.complete ? reveal() : img.addEventListener('load', reveal, {once:true});
