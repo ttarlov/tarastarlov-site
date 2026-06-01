@@ -13,8 +13,8 @@ const EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.tif', '.tiff']);
 
 const slug = f => f.replace(/\.[^.]+$/, '').toLowerCase()
   .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-const title = f => f.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim()
-  .replace(/\b\w/g, c => c.toUpperCase());
+const title = f => f.replace(/\.[^.]+$/, '').replace(/^\d+[-_ ]*/, '')   // drop ordering prefix
+  .replace(/[-_]+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase());
 
 async function main() {
   if (!existsSync(SRC)) {
@@ -36,13 +36,14 @@ async function main() {
   for (const file of files) {
     const src = path.join(SRC, file);
     const id = slug(file);
-    const meta = await sharp(src, { failOn: 'none' }).metadata();
 
-    // honor EXIF orientation for the reported dimensions
-    let [w, h] = [meta.width, meta.height];
-    if (meta.orientation && meta.orientation >= 5) [w, h] = [h, w];
+    // bake EXIF rotation in once → everything downstream is already upright,
+    // so dimensions and crops are correct with no orientation guesswork
+    const upright = await sharp(src, { failOn: 'none' }).rotate().toBuffer();
+    const meta = await sharp(upright).metadata();
+    const w = meta.width, h = meta.height;
 
-    const { dominant } = await sharp(src, { failOn: 'none' }).stats();
+    const { dominant } = await sharp(upright).stats();
     const color = '#' + [dominant.r, dominant.g, dominant.b]
       .map(n => n.toString(16).padStart(2, '0')).join('');
 
@@ -51,9 +52,7 @@ async function main() {
     sizes = [...new Set(sizes)].sort((a, b) => a - b);
 
     for (const x of sizes) {
-      const base = sharp(src, { failOn: 'none' })
-        .rotate()                                  // bake in EXIF rotation
-        .resize({ width: x, withoutEnlargement: true });
+      const base = sharp(upright).resize({ width: x, withoutEnlargement: true });
       await base.clone().avif({ quality: 50 }).toFile(path.join(OUT, `${id}-${x}.avif`));
       await base.clone().webp({ quality: 72 }).toFile(path.join(OUT, `${id}-${x}.webp`));
     }

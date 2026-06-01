@@ -2,3 +2,4 @@ node_modules/
 photos/incoming/
 .DS_Store
 *.log
+.vercel

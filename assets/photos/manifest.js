@@ -1,10 +1,10 @@
 window.__PHOTOS__ = [
   {
-    "id": "01-ridgeline-golden-hour",
-    "alt": "01 Ridgeline Golden Hour",
-    "w": 1600,
-    "h": 1067,
-    "color": "#987868",
+    "id": "01-the-van-snowline",
+    "alt": "The Van Snowline",
+    "w": 4898,
+    "h": 3265,
+    "color": "#c8c8b8",
     "sizes": [
       480,
       960,
@@ -12,51 +12,87 @@ window.__PHOTOS__ = [
     ]
   },
   {
-    "id": "02-the-van-dusk",
-    "alt": "02 The Van Dusk",
-    "w": 1000,
-    "h": 1400,
-    "color": "#a83878",
+    "id": "02-camp-under-stars",
+    "alt": "Camp Under Stars",
+    "w": 4000,
+    "h": 6000,
+    "color": "#080808",
     "sizes": [
       480,
       960,
-      1000
+      1600
     ]
   },
   {
-    "id": "03-xt250-gravel",
-    "alt": "03 Xt250 Gravel",
-    "w": 1280,
-    "h": 1280,
-    "color": "#18a8a8",
+    "id": "03-canyon-river-road",
+    "alt": "Canyon River Road",
+    "w": 4898,
+    "h": 3265,
+    "color": "#080808",
     "sizes": [
       480,
       960,
-      1280
+      1600
     ]
   },
   {
-    "id": "04-camp-night",
-    "alt": "04 Camp Night",
-    "w": 1500,
-    "h": 1000,
-    "color": "#483848",
+    "id": "04-xt250-overlook",
+    "alt": "Xt250 Overlook",
+    "w": 4898,
+    "h": 3265,
+    "color": "#c8d8c8",
     "sizes": [
       480,
       960,
-      1500
+      1600
     ]
   },
   {
-    "id": "05-pass-summit",
-    "alt": "05 Pass Summit",
-    "w": 1200,
-    "h": 1500,
-    "color": "#e89858",
+    "id": "05-monument-valley-944",
+    "alt": "Monument Valley 944",
+    "w": 4898,
+    "h": 3265,
+    "color": "#f8f8e8",
     "sizes": [
       480,
       960,
-      1200
+      1600
+    ]
+  },
+  {
+    "id": "06-canyons-edge",
+    "alt": "Canyons Edge",
+    "w": 4000,
+    "h": 6000,
+    "color": "#080808",
+    "sizes": [
+      480,
+      960,
+      1600
+    ]
+  },
+  {
+    "id": "07-sandstone-and-sky",
+    "alt": "Sandstone And Sky",
+    "w": 3265,
+    "h": 4898,
+    "color": "#b8a898",
+    "sizes": [
+      480,
+      960,
+      1600
+    ]
+  },
+  {
+    "id": "08-haul-road",
+    "alt": "Haul Road",
+    "w": 4898,
+    "h": 3265,
+    "color": "#f8f8e8",
+    "sizes": [
+      480,
+      960,
+      1600
     ]
   }
 ];
