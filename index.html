@@ -422,11 +422,39 @@
     </div>
   </div>
   <div class="colophon">
-    <span>© 2026 Taras Tarlov · Built by hand</span>
+    <span>© 2026 Taras Tarlov · <span id="sig">vibecoded</span></span>
     <span>FINISH · STAGE 05 · NO TEMPLATE SMELL</span>
   </div>
 </footer>
 
+<script>
+  // ----- colophon easter egg: a different deadpan sign-off each reload -----
+  (function(){
+    const sig = document.getElementById('sig');
+    if(!sig) return;
+    const lines = [
+      'vibecoded',
+      'built in a van down by the river',
+      'compiled at 9,000 feet',
+      'running on diesel and spite',
+      'Salesforce by day, ridgelines by choice',
+      'autonomy as a service',
+      'deployed from a trailhead parking lot',
+      'tabs, not therapy',
+      'off-grid, on-brand',
+      'mostly held together with hose clamps',
+      'tethered, deliberately',
+      'zero dependencies, one motorcycle',
+      'surface-level conversation not supported',
+      '404: certainty not found',
+      'powered by coffee and pattern recognition',
+      'now with 100% more wandering',
+      'no template smell',
+      'rebased, not running away'
+    ];
+    sig.textContent = lines[Math.floor(Math.random() * lines.length)];
+  })();
+</script>
 <script src="assets/photos/manifest.js"></script>
 <script>
   // ----- build the photo gallery from the generated manifest -----
