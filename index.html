@@ -215,6 +215,13 @@
   .lightbox.open{display:flex}
   .lightbox img{max-width:100%;max-height:92vh;border-radius:6px;
     box-shadow:0 24px 90px rgba(0,0,0,.55)}
+  .more-btn{display:block;margin:34px auto 0;font-family:"Space Mono",monospace;
+    font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);
+    background:transparent;border:2px solid var(--ink);border-radius:4px;
+    padding:14px 30px;cursor:pointer;
+    transition:transform .3s,box-shadow .3s,background .3s,color .3s}
+  .more-btn:hover{background:var(--ink);color:var(--cream);
+    transform:translate(-3px,-3px);box-shadow:6px 6px 0 var(--orange)}
 
   /* writing / stage-time list */
   .log{border-top:2px solid var(--ink)}
@@ -514,7 +521,10 @@
     const base = 'assets/photos/';
     const sizesAttr = '(max-width:680px) 100vw, (max-width:1100px) 50vw, 33vw';
 
-    data.forEach(p => {
+    const INITIAL = 9, STEP = 7;   // show this many, then +STEP per "See more"
+    let shown = 0;
+
+    const makeShot = p => {
       const max = p.sizes[p.sizes.length - 1];
       const ss = ext => p.sizes.map(w => `${base}${p.id}-${w}.${ext} ${w}w`).join(', ');
       const a = document.createElement('a');
@@ -533,8 +543,22 @@
       const img = a.querySelector('img');
       const reveal = () => a.classList.add('loaded');
       img.complete ? reveal() : img.addEventListener('load', reveal, {once:true});
-      el.appendChild(a);
-    });
+      return a;
+    };
+
+    const btn = document.createElement('button');
+    btn.className = 'more-btn';
+    btn.type = 'button';
+    el.insertAdjacentElement('afterend', btn);
+
+    const renderNext = n => {
+      const end = Math.min(shown + n, data.length);
+      for (; shown < end; shown++) el.appendChild(makeShot(data[shown]));
+      if (shown >= data.length) btn.style.display = 'none';
+      else btn.textContent = `See more (${data.length - shown})`;
+    };
+    btn.addEventListener('click', () => renderNext(STEP));
+    renderNext(INITIAL);
 
     // minimal click-to-zoom lightbox
     const lb = document.createElement('div');
