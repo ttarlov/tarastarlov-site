@@ -103,7 +103,10 @@
   .hud-top .dot{width:8px;height:8px;background:var(--pink);border-radius:50%;
     box-shadow:0 0 12px var(--pink);animation:pulse 1.8s infinite ease-in-out}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-  .hud-top .coords{text-align:right;line-height:1.6;opacity:.85}
+  .hud-top .coords{text-align:right;line-height:1.6;opacity:.85;
+    pointer-events:auto;cursor:pointer;color:inherit;text-decoration:none;
+    display:inline-block;transition:color .3s,opacity .3s}
+  .hud-top .coords:hover{color:var(--teal);opacity:1}
 
   .hud-bottom{display:flex;flex-direction:column;gap:clamp(22px,4vh,40px);align-self:stretch}
   .title-block{align-self:flex-start;max-width:min(92vw,560px);pointer-events:auto}
@@ -359,7 +362,7 @@
   <div class="hud">
     <div class="hud-top">
       <div class="stage"><span class="dot"></span>STAGE 01 · THE ROAD SO FAR</div>
-      <div class="coords">39.7392° N&nbsp;&nbsp;104.9903° W<br/>ELEV 1609M · GOLDEN HOUR</div>
+      <a class="coords" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&autoplay=1" target="_blank" rel="noopener" aria-label="Current coordinates">39.7392° N&nbsp;&nbsp;104.9903° W<br/>ELEV 1609M · GOLDEN HOUR</a>
     </div>
 
     <div class="hud-bottom">
