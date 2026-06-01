@@ -42,6 +42,13 @@
   .hero{position:relative;height:100svh;min-height:600px;overflow:hidden}
   .scene{position:absolute;inset:0;z-index:0}
   .scene svg{width:100%;height:100%;display:block}
+  /* hero name: full "TARAS ☀ TARLOV" on wide screens, "T ☀ T" monogram when
+     the viewport is portrait-ish (the scene crops the sides, clipping wide text) */
+  .nm-short{display:none}
+  @media (max-aspect-ratio: 7/5){
+    .nm-full{display:none}
+    .nm-short{display:inline}
+  }
 
   /* HUD / telemetry overlay */
   .hud{position:absolute;inset:0;z-index:3;pointer-events:none;
@@ -261,10 +268,14 @@
       <rect width="1440" height="900" fill="url(#sky)"/>
       <g id="sunGroup">
         <circle id="sunGlow" cx="700" cy="360" r="300" fill="url(#glow)"/>
-        <text id="nameTop" x="612" y="386" text-anchor="end" fill="#fbe9c8"
+        <text class="nm-full" x="612" y="386" text-anchor="end" fill="#fbe9c8"
               style="font-family:'Syne',sans-serif;font-weight:800;font-size:72px;letter-spacing:-2px">TARAS</text>
-        <text id="nameBot" x="788" y="386" text-anchor="start" fill="#fbe9c8"
+        <text class="nm-full" x="788" y="386" text-anchor="start" fill="#fbe9c8"
               style="font-family:'Syne',sans-serif;font-weight:800;font-size:72px;letter-spacing:-2px">TARLOV</text>
+        <text class="nm-short" x="616" y="394" text-anchor="end" fill="#fbe9c8"
+              style="font-family:'Syne',sans-serif;font-weight:800;font-size:96px;letter-spacing:-2px">T</text>
+        <text class="nm-short" x="784" y="394" text-anchor="start" fill="#fbe9c8"
+              style="font-family:'Syne',sans-serif;font-weight:800;font-size:96px;letter-spacing:-2px">T</text>
         <circle id="sun" cx="700" cy="360" r="64" fill="#ffe9bd"/>
       </g>
 
