@@ -36,8 +36,8 @@ window.__PHOTOS__ = [
     ]
   },
   {
-    "id": "04-xt250-overlook",
-    "alt": "Xt250 Overlook",
+    "id": "04-g650x-overlook",
+    "alt": "G650x Overlook",
     "w": 4898,
     "h": 3265,
     "color": "#c8d8c8",
