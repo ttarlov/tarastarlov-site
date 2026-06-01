@@ -180,9 +180,15 @@
 
   /* projects */
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
-  .card{border:2px solid var(--ink);border-radius:6px;padding:26px;
-    transition:transform .35s,box-shadow .35s;background:var(--paper)}
+  .card{position:relative;border:2px solid var(--ink);border-radius:6px;padding:26px;
+    transition:transform .35s,box-shadow .35s,opacity .35s;background:var(--paper)}
   .card:hover{transform:translate(-4px,-4px);box-shadow:8px 8px 0 var(--ink)}
+  .card.soon{opacity:.45;filter:grayscale(.9)}
+  .card.soon:hover{transform:none;box-shadow:none;opacity:.62}
+  .card .badge{position:absolute;top:14px;right:14px;
+    font-family:"Space Mono",monospace;font-size:10px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--ink);border:1.5px solid var(--ink);
+    padding:3px 7px;border-radius:3px;opacity:.75}
   .card .k{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:.2em;
     text-transform:uppercase;color:var(--orange);margin-bottom:14px}
   .card h3{font-family:"Syne",sans-serif;font-weight:800;
@@ -354,8 +360,8 @@
       <p>Things I've shipped, mostly through conversation with a machine.</p>
     </div>
     <div class="cards">
-      <div class="card"><div class="k">CONSUMER APP</div><h3>CarSpotter</h3><p>Car-ID quiz app — first consumer app built entirely through AI conversation. Shipped.</p></div>
-      <div class="card"><div class="k">TEAM TOOL</div><h3>PokerAI</h3><p>Pointing-poker web app for the dev team. Now on Supabase Realtime. A craft project as much as a utility.</p></div>
+      <div class="card soon"><span class="badge">Private</span><div class="k">CONSUMER APP</div><h3>CarSpotter</h3><p>Car-ID quiz app — first consumer app built entirely through AI conversation. Shipped.</p></div>
+      <div class="card soon"><span class="badge">Private</span><div class="k">TEAM TOOL</div><h3>PokerAI</h3><p>Pointing-poker web app for the dev team. Now on Supabase Realtime. A craft project as much as a utility.</p></div>
       <div class="card"><div class="k">BRAND</div><h3>Revel(ation) Diaries</h3><p>Van-life and adventure content — photography, writing, the whole thing. This is where it lives.</p></div>
       <div class="card"><div class="k">MAKING</div><h3>3D Print Shop</h3><p>Low-maintenance Etsy income that travels in the van. Quiet, steady, mine.</p></div>
     </div>
