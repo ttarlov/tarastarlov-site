@@ -1,0 +1,62 @@
+[
+  {
+    "id": "01-ridgeline-golden-hour",
+    "alt": "01 Ridgeline Golden Hour",
+    "w": 1600,
+    "h": 1067,
+    "color": "#987868",
+    "sizes": [
+      480,
+      960,
+      1600
+    ]
+  },
+  {
+    "id": "02-the-van-dusk",
+    "alt": "02 The Van Dusk",
+    "w": 1000,
+    "h": 1400,
+    "color": "#a83878",
+    "sizes": [
+      480,
+      960,
+      1000
+    ]
+  },
+  {
+    "id": "03-xt250-gravel",
+    "alt": "03 Xt250 Gravel",
+    "w": 1280,
+    "h": 1280,
+    "color": "#18a8a8",
+    "sizes": [
+      480,
+      960,
+      1280
+    ]
+  },
+  {
+    "id": "04-camp-night",
+    "alt": "04 Camp Night",
+    "w": 1500,
+    "h": 1000,
+    "color": "#483848",
+    "sizes": [
+      480,
+      960,
+      1500
+    ]
+  },
+  {
+    "id": "05-pass-summit",
+    "alt": "05 Pass Summit",
+    "w": 1200,
+    "h": 1500,
+    "color": "#e89858",
+    "sizes": [
+      480,
+      960,
+      1200
+    ]
+  }
+]

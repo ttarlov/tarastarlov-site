@@ -1,0 +1,13 @@
+{
+  "name": "tarastarlov-site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "photos": "node scripts/optimize.mjs",
+    "samples": "node scripts/_samples.mjs"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
+  }
+}
