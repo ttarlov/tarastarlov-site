@@ -126,6 +126,13 @@
   .tagline{margin:26px auto 0;font-size:clamp(15px,1.8vw,20px);max-width:38ch;
     color:var(--cream);opacity:0;animation:rise .8s .55s forwards;line-height:1.5}
   .tagline b{color:var(--teal);font-weight:600}
+  /* desktop: full-width eyebrow rule, tagline left-aligned (mobile stays centered) */
+  @media (min-width:768px){
+    .title-block{align-self:stretch;text-align:left;max-width:none}
+    .eyebrow{justify-content:flex-start}
+    .eyebrow::after{flex:1}
+    .tagline{margin:22px 0 0;max-width:50ch}
+  }
 
   @keyframes reveal{to{transform:translateY(0)}}
   @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
@@ -372,7 +379,7 @@
     <div class="hud-bottom">
       <div class="title-block">
         <div class="eyebrow">Builder · Rider · Van-dweller</div>
-        <p class="tagline">Photos, miles, and writing from a <b>Sprinter van</b> with a motorcycle on the back. Built by hand, somewhere off the interstate.</p>
+        <p class="tagline">Photos, miles, and writing from a <b>Sprinter van</b> with a motorcycle on the back. vibecoded, somewhere off the interstate.</p>
       </div>
 
       <nav class="stages">
