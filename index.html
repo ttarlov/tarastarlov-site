@@ -89,11 +89,6 @@
   @media (max-aspect-ratio: 7/5){
     .nm-full{display:none}
     .nm-short{display:inline}
-    /* monogram view: re-center sun + T·T on the true middle (720) since the
-       cropped scene centers there, not on the desktop sun position (700) */
-    #sun, #sunGlow{cx:720px}
-    #nmT1{x:632px}
-    #nmT2{x:808px}
   }
 
   /* HUD / telemetry overlay */
@@ -324,16 +319,16 @@
 
       <rect width="1440" height="900" fill="url(#sky)"/>
       <g id="sunGroup">
-        <circle id="sunGlow" cx="700" cy="360" r="300" fill="url(#glow)"/>
-        <text class="nm-full" x="612" y="386" text-anchor="end" fill="#fbe9c8"
+        <circle id="sunGlow" cx="720" cy="360" r="300" fill="url(#glow)"/>
+        <text class="nm-full" x="632" y="386" text-anchor="end" fill="#fbe9c8"
               style="font-family:'Syne',sans-serif;font-weight:800;font-size:72px;letter-spacing:-2px">TARAS</text>
-        <text class="nm-full" x="788" y="386" text-anchor="start" fill="#fbe9c8"
+        <text class="nm-full" x="808" y="386" text-anchor="start" fill="#fbe9c8"
               style="font-family:'Syne',sans-serif;font-weight:800;font-size:72px;letter-spacing:-2px">TARLOV</text>
-        <text id="nmT1" class="nm-short" x="616" y="394" text-anchor="end" fill="#fbe9c8"
+        <text id="nmT1" class="nm-short" x="632" y="394" text-anchor="end" fill="#fbe9c8"
               style="font-family:'Syne',sans-serif;font-weight:800;font-size:96px;letter-spacing:-2px">T</text>
-        <text id="nmT2" class="nm-short" x="784" y="394" text-anchor="start" fill="#fbe9c8"
+        <text id="nmT2" class="nm-short" x="808" y="394" text-anchor="start" fill="#fbe9c8"
               style="font-family:'Syne',sans-serif;font-weight:800;font-size:96px;letter-spacing:-2px">T</text>
-        <circle id="sun" cx="700" cy="360" r="64" fill="#ffe9bd"/>
+        <circle id="sun" cx="720" cy="360" r="64" fill="#ffe9bd"/>
       </g>
 
       <!-- far ridge -->
