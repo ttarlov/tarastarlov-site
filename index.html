@@ -131,21 +131,19 @@
   @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 
   /* stage nav */
-  .stages{display:flex;flex-wrap:wrap;gap:0;align-self:stretch;
-    border-top:1px solid rgba(251,233,200,.25);pointer-events:auto;
+  .stages{display:flex;flex-wrap:wrap;gap:12px;align-self:stretch;pointer-events:auto;
     opacity:0;animation:rise .8s .8s forwards}
   .stages a{flex:1 1 auto;min-width:140px;padding:18px 20px 16px;text-align:center;
     text-decoration:none;color:var(--cream);position:relative;
-    border-right:1px solid rgba(251,233,200,.15);
-    transition:background .35s,color .35s}
-  .stages a:last-child{border-right:none}
+    border:1px solid rgba(251,233,200,.35);border-radius:5px;
+    transition:background .35s,color .35s,border-color .35s}
   .stages a .num{font-family:"Space Mono",monospace;font-size:11px;
     letter-spacing:.2em;opacity:.6;display:block;margin-bottom:6px}
   .stages a .name{font-family:"Syne",sans-serif;font-weight:700;
     font-size:clamp(17px,2vw,22px);text-transform:uppercase;letter-spacing:.01em}
   .stages a::after{content:"→";position:absolute;right:18px;top:50%;
     transform:translate(8px,-50%);opacity:0;transition:.35s}
-  .stages a:hover{background:var(--pink);color:var(--ink)}
+  .stages a:hover{background:var(--pink);color:var(--ink);border-color:var(--pink)}
   .stages a:hover::after{opacity:1;transform:translate(0,-50%)}
 
   /* ---------- SECTIONS ---------- */
@@ -281,7 +279,7 @@
   @media(max-width:680px){
     .ph:nth-child(n){grid-column:span 12 !important;min-height:200px}
     .hud-top .coords{display:none}
-    .stages a{flex:1 1 50%;min-width:0}
+    .stages a{flex:1 1 calc(50% - 6px);min-width:0}
   }
   @media(prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
