@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Taras Tarlov">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#173a52"/>
+      <stop offset="46%" stop-color="#7a5a72"/>
+      <stop offset="72%" stop-color="#e9714e"/>
+      <stop offset="100%" stop-color="#ffb06b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffe2a3"/>
+      <stop offset="55%" stop-color="#ffcf86" stop-opacity=".55"/>
+      <stop offset="100%" stop-color="#ffcf86" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="round"><rect width="64" height="64" rx="13"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#round)">
+    <!-- sky -->
+    <rect width="64" height="64" fill="url(#sky)"/>
+    <!-- sun glow + disc -->
+    <circle cx="32" cy="30" r="22" fill="url(#glow)"/>
+    <circle cx="32" cy="30" r="11" fill="#ffe9bd"/>
+    <!-- far ridge (teal) -->
+    <polygon fill="#3a7d83" points="0,38 14,33 27,37 40,32 52,37 64,33 64,64 0,64"/>
+    <!-- mid ridge (orange) -->
+    <polygon fill="#e08a52" points="0,46 16,40 31,45 46,39 64,45 64,64 0,64"/>
+    <!-- near ridge (purple) -->
+    <polygon fill="#3b2b4f" points="0,54 18,47 38,53 56,47 64,50 64,64 0,64"/>
+  </g>
+</svg>
