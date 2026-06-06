@@ -5,6 +5,15 @@ import crypto from 'node:crypto';
 
 export const MANIFEST = 'photos/manifest.json';
 
+// Resolve the Blob token. Defaults to BLOB_READ_WRITE_TOKEN, but a store with a
+// custom name/prefix injects e.g. PHOTOS_READ_WRITE_TOKEN — so fall back to any
+// *_READ_WRITE_TOKEN. Pass the result explicitly to put/list/del.
+export function blobToken() {
+  if (process.env.BLOB_READ_WRITE_TOKEN) return process.env.BLOB_READ_WRITE_TOKEN;
+  const key = Object.keys(process.env).find(k => /READ_WRITE_TOKEN$/.test(k) && process.env[k]);
+  return key ? process.env[key] : null;
+}
+
 // constant-time password check on SHA-256 digests (always 32 bytes, so
 // timingSafeEqual never throws on a length mismatch and leaks nothing)
 const sha = s => crypto.createHash('sha256').update(String(s ?? '')).digest();
@@ -27,7 +36,7 @@ export async function readJson(req) {
 // Load the manifest from Blob. Returns the canonical public host so callers can
 // build image/variant URLs without hardcoding the store id anywhere.
 export async function loadManifest() {
-  const { blobs } = await list({ prefix: MANIFEST, limit: 1 });
+  const { blobs } = await list({ prefix: MANIFEST, limit: 1, token: blobToken() });
   if (!blobs.length) return { url: null, host: null, photos: [] };
   const url = blobs[0].url;
   const host = new URL(url).origin;
@@ -44,6 +53,7 @@ export async function writeManifest(photos) {
     addRandomSuffix: false,
     allowOverwrite: true,
     cacheControlMaxAge: 0,            // always fresh; gallery also fetches no-store
+    token: blobToken(),
   });
 }
 

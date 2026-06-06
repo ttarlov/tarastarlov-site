@@ -1,7 +1,7 @@
 // Protected: removes a photo's variants from Blob and its manifest entry.
 // Deletes by exact variant URL (not prefix) so ids like "x" and "x-2" never collide.
 import { del } from '@vercel/blob';
-import { authed, readJson, loadManifest, writeManifest } from './_lib.js';
+import { authed, readJson, loadManifest, writeManifest, blobToken } from './_lib.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
       for (const x of entry.sizes) {
         urls.push(`${host}/photos/${id}-${x}.avif`, `${host}/photos/${id}-${x}.webp`);
       }
-      await del(urls);
+      await del(urls, { token: blobToken() });
     }
 
     await writeManifest(photos.filter(p => p.id !== id));
