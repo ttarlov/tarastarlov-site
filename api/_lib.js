@@ -1,0 +1,72 @@
+// Shared helpers for the photo API. Files prefixed with "_" are not routed by
+// Vercel, but can be imported by the sibling functions in this folder.
+import { put, list } from '@vercel/blob';
+import crypto from 'node:crypto';
+
+export const MANIFEST = 'photos/manifest.json';
+
+// Resolve a static Blob token if one exists (BLOB_READ_WRITE_TOKEN, or any
+// *_READ_WRITE_TOKEN from a custom-named store). When absent, return undefined
+// so the SDK falls back to Vercel's automatic (OIDC) auth for same-project
+// functions — which is how this store is wired (it injects BLOB_STORE_ID, no
+// static token). Use blobOpts() to attach the token only when present.
+export function blobToken() {
+  if (process.env.BLOB_READ_WRITE_TOKEN) return process.env.BLOB_READ_WRITE_TOKEN;
+  const key = Object.keys(process.env).find(k => /READ_WRITE_TOKEN$/.test(k) && process.env[k]);
+  return key ? process.env[key] : undefined;
+}
+
+// Merge a token into Blob SDK options only if a static one exists; otherwise
+// omit it entirely so automatic auth kicks in (passing token:null breaks it).
+export function blobOpts(opts = {}) {
+  const t = blobToken();
+  return t ? { ...opts, token: t } : opts;
+}
+
+// constant-time password check on SHA-256 digests (always 32 bytes, so
+// timingSafeEqual never throws on a length mismatch and leaks nothing)
+const sha = s => crypto.createHash('sha256').update(String(s ?? '')).digest();
+export function authed(req) {
+  const want = process.env.ADMIN_UPLOAD_PASSWORD || '';
+  if (!want) return false;
+  const got = req.headers['x-admin-token'] || '';
+  return crypto.timingSafeEqual(sha(got), sha(want));
+}
+
+// Vercel auto-parses JSON bodies, but fall back to reading the stream so the
+// functions work the same under `vercel dev` and any runtime quirks.
+export async function readJson(req) {
+  if (req.body && typeof req.body === 'object') return req.body;
+  let raw = '';
+  for await (const chunk of req) raw += chunk;
+  try { return JSON.parse(raw || '{}'); } catch { return {}; }
+}
+
+// Load the manifest from Blob. Returns the canonical public host so callers can
+// build image/variant URLs without hardcoding the store id anywhere.
+export async function loadManifest() {
+  const { blobs } = await list(blobOpts({ prefix: MANIFEST, limit: 1 }));
+  if (!blobs.length) return { url: null, host: null, photos: [] };
+  const url = blobs[0].url;
+  const host = new URL(url).origin;
+  const photos = await fetch(url, { cache: 'no-store' })
+    .then(r => (r.ok ? r.json() : []))
+    .catch(() => []);
+  return { url, host, photos: Array.isArray(photos) ? photos : [] };
+}
+
+export async function writeManifest(photos) {
+  await put(MANIFEST, JSON.stringify(photos), blobOpts({
+    access: 'public',
+    contentType: 'application/json',
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    cacheControlMaxAge: 0,            // always fresh; gallery also fetches no-store
+  }));
+}
+
+// id slug + display title, mirrored from scripts/optimize.mjs
+export const slug = f => String(f).replace(/\.[^.]+$/, '').toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+export const titleCase = f => String(f).replace(/\.[^.]+$/, '').replace(/^\d+[-_ ]*/, '')
+  .replace(/[-_]+/g, ' ').trim().replace(/\b\w/g, c => c.toUpperCase());

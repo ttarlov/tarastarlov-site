@@ -3,11 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "photos": "node scripts/optimize.mjs",
-    "samples": "node scripts/_samples.mjs"
+    "samples": "node scripts/_samples.mjs",
+    "migrate": "node scripts/migrate-to-blob.mjs"
   },
-  "devDependencies": {
+  "dependencies": {
+    "@vercel/blob": "^2.4.0",
     "sharp": "^0.34.5"
   }
 }
