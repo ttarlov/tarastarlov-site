@@ -1,6 +1,7 @@
 {
   "functions": {
-    "api/upload.js": { "memory": 1024, "maxDuration": 30 }
+    "api/upload.js": { "memory": 1024, "maxDuration": 30 },
+    "api/migrate-seed.js": { "memory": 512, "maxDuration": 60, "includeFiles": "assets/photos/**,photos.json" }
   },
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" }
