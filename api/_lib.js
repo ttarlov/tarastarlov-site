@@ -5,13 +5,22 @@ import crypto from 'node:crypto';
 
 export const MANIFEST = 'photos/manifest.json';
 
-// Resolve the Blob token. Defaults to BLOB_READ_WRITE_TOKEN, but a store with a
-// custom name/prefix injects e.g. PHOTOS_READ_WRITE_TOKEN — so fall back to any
-// *_READ_WRITE_TOKEN. Pass the result explicitly to put/list/del.
+// Resolve a static Blob token if one exists (BLOB_READ_WRITE_TOKEN, or any
+// *_READ_WRITE_TOKEN from a custom-named store). When absent, return undefined
+// so the SDK falls back to Vercel's automatic (OIDC) auth for same-project
+// functions — which is how this store is wired (it injects BLOB_STORE_ID, no
+// static token). Use blobOpts() to attach the token only when present.
 export function blobToken() {
   if (process.env.BLOB_READ_WRITE_TOKEN) return process.env.BLOB_READ_WRITE_TOKEN;
   const key = Object.keys(process.env).find(k => /READ_WRITE_TOKEN$/.test(k) && process.env[k]);
-  return key ? process.env[key] : null;
+  return key ? process.env[key] : undefined;
+}
+
+// Merge a token into Blob SDK options only if a static one exists; otherwise
+// omit it entirely so automatic auth kicks in (passing token:null breaks it).
+export function blobOpts(opts = {}) {
+  const t = blobToken();
+  return t ? { ...opts, token: t } : opts;
 }
 
 // constant-time password check on SHA-256 digests (always 32 bytes, so
@@ -36,7 +45,7 @@ export async function readJson(req) {
 // Load the manifest from Blob. Returns the canonical public host so callers can
 // build image/variant URLs without hardcoding the store id anywhere.
 export async function loadManifest() {
-  const { blobs } = await list({ prefix: MANIFEST, limit: 1, token: blobToken() });
+  const { blobs } = await list(blobOpts({ prefix: MANIFEST, limit: 1 }));
   if (!blobs.length) return { url: null, host: null, photos: [] };
   const url = blobs[0].url;
   const host = new URL(url).origin;
@@ -47,14 +56,13 @@ export async function loadManifest() {
 }
 
 export async function writeManifest(photos) {
-  await put(MANIFEST, JSON.stringify(photos), {
+  await put(MANIFEST, JSON.stringify(photos), blobOpts({
     access: 'public',
     contentType: 'application/json',
     addRandomSuffix: false,
     allowOverwrite: true,
     cacheControlMaxAge: 0,            // always fresh; gallery also fetches no-store
-    token: blobToken(),
-  });
+  }));
 }
 
 // id slug + display title, mirrored from scripts/optimize.mjs

@@ -3,19 +3,13 @@
 // Blob, and prepends the entry to the manifest (newest first).
 import { put } from '@vercel/blob';
 import sharp from 'sharp';
-import { authed, readJson, loadManifest, writeManifest, slug, titleCase, blobToken } from './_lib.js';
+import { authed, readJson, loadManifest, writeManifest, slug, titleCase, blobOpts } from './_lib.js';
 
 const WIDTHS = [480, 960, 1600];
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });
   if (!authed(req)) return res.status(401).json({ error: 'unauthorized' });
-  const token = blobToken();
-  if (!token) {
-    // diagnostic: report which token-ish env var names exist (names only, no values)
-    const sawEnvKeys = Object.keys(process.env).filter(k => /TOKEN|BLOB/i.test(k));
-    return res.status(500).json({ error: 'blob not configured', sawEnvKeys });
-  }
 
   try {
     const { data, name, alt } = await readJson(req);
@@ -52,14 +46,14 @@ export default async function handler(req, res) {
         pipe.clone().avif({ quality: 50 }).toBuffer(),
         pipe.clone().webp({ quality: 72 }).toBuffer(),
       ]);
-      await put(`photos/${id}-${x}.avif`, avif, {
+      await put(`photos/${id}-${x}.avif`, avif, blobOpts({
         access: 'public', contentType: 'image/avif',
-        addRandomSuffix: false, allowOverwrite: true, cacheControlMaxAge: 31536000, token,
-      });
-      await put(`photos/${id}-${x}.webp`, webp, {
+        addRandomSuffix: false, allowOverwrite: true, cacheControlMaxAge: 31536000,
+      }));
+      await put(`photos/${id}-${x}.webp`, webp, blobOpts({
         access: 'public', contentType: 'image/webp',
-        addRandomSuffix: false, allowOverwrite: true, cacheControlMaxAge: 31536000, token,
-      });
+        addRandomSuffix: false, allowOverwrite: true, cacheControlMaxAge: 31536000,
+      }));
     }
 
     const entry = { id, alt: (alt && alt.trim()) || titleCase(name || id), w, h, color, sizes };
