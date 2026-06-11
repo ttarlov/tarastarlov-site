@@ -1,0 +1,2135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>DESERT CHASE</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden; background: #1a0e2a;
+    overscroll-behavior: none; touch-action: none;
+  }
+  #game-root { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; outline: none; touch-action: none; }
+
+  #hud {
+    position: absolute; inset: 0; pointer-events: none;
+    font-family: "Courier New", ui-monospace, monospace;
+    color: #ffd9b0; text-shadow: 0 0 6px rgba(255, 20, 147, .55);
+    user-select: none;
+  }
+  #fps {
+    position: absolute; top: 10px; right: 14px;
+    font-size: 13px; letter-spacing: 1px; opacity: .8;
+  }
+  #stats {
+    position: absolute; top: 10px; left: 14px;
+    font-size: 15px; letter-spacing: 2px; line-height: 1.6;
+  }
+  #score { color: #ffe135; font-size: 19px; text-shadow: 2px 2px 0 #ff1493; }
+  #hpwrap {
+    position: absolute; bottom: 38px; left: 14px;
+    width: 180px; height: 12px; border: 2px solid #ffd9b0;
+    box-shadow: 0 0 8px rgba(255,20,147,.4);
+  }
+  #hpbar {
+    height: 100%; width: 100%; background: linear-gradient(90deg, #ff1493, #ffe135);
+    transition: width .25s;
+  }
+  .threat {
+    position: absolute; bottom: 80px; font-size: 30px; color: #ff1493;
+    text-shadow: 0 0 12px #ff1493; opacity: 0;
+  }
+  .threat.on { opacity: 1; animation: blink .5s steps(2) infinite; }
+  #threat-l { left: 16px; }
+  #threat-r { right: 16px; }
+  #combo {
+    position: absolute; top: 28%; left: 50%; transform: translateX(-50%);
+    font-size: 34px; font-weight: bold; letter-spacing: 4px;
+    color: #ffe135; text-shadow: 3px 3px 0 #ff1493; opacity: 0;
+  }
+  #combo.pop { animation: comboPop 1s ease-out; }
+  @keyframes comboPop {
+    0% { opacity: 0; transform: translateX(-50%) scale(0.4); }
+    18% { opacity: 1; transform: translateX(-50%) scale(1.25); }
+    30% { transform: translateX(-50%) scale(1.0); }
+    75% { opacity: 1; }
+    100% { opacity: 0; transform: translateX(-50%) scale(1.0) translateY(-22px); }
+  }
+  #hint {
+    position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+    font-size: 12px; letter-spacing: 2px; opacity: .65; white-space: nowrap;
+  }
+
+  #screens { position: absolute; inset: 0; }
+  .screen {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px;
+    font-family: "Courier New", ui-monospace, monospace;
+    background: rgba(20, 8, 32, 0.28); cursor: pointer;
+  }
+  .screen.hidden { display: none; }
+  .title {
+    font-size: clamp(34px, 7vw, 72px); font-weight: bold; letter-spacing: 10px;
+    color: #ffe135;
+    text-shadow:
+      0 0 18px rgba(255, 225, 53, .8),
+      3px 3px 0 #ff1493,
+      6px 6px 0 rgba(157, 107, 168, .8);
+  }
+  .subtitle { font-size: 14px; letter-spacing: 6px; color: #ff8cc8; text-shadow: 0 0 10px #ff1493; }
+  .start {
+    font-size: 15px; letter-spacing: 3px; color: #ffd9b0;
+    animation: blink 1.2s steps(2) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0.15; } }
+  #err {
+    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    color: #ffd9b0; font-family: ui-monospace, monospace; text-align: center; padding: 24px;
+  }
+
+  /* --- touch controls: arrows bottom-right, fire bottom-left --- */
+  #touch-ui { position: absolute; inset: 0; pointer-events: none; display: none; z-index: 5; }
+  #touch-ui.active { display: block; }
+  .tbtn {
+    position: absolute; pointer-events: auto;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Courier New", ui-monospace, monospace;
+    font-size: 24px; color: #ffd9b0;
+    background: rgba(26, 20, 36, 0.38);
+    border: 2px solid rgba(255, 217, 176, 0.55);
+    border-radius: 14px;
+    user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+  }
+  .tbtn.held { background: rgba(255, 20, 147, 0.4); border-color: #ff1493; }
+  #tb-up    { right: calc(78px + env(safe-area-inset-right)); bottom: calc(150px + env(safe-area-inset-bottom)); width: 62px; height: 62px; }
+  #tb-down  { right: calc(78px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom)); width: 62px; height: 62px; }
+  #tb-left  { right: calc(146px + env(safe-area-inset-right)); bottom: calc(82px + env(safe-area-inset-bottom)); width: 62px; height: 62px; }
+  #tb-right { right: calc(10px + env(safe-area-inset-right)); bottom: calc(82px + env(safe-area-inset-bottom)); width: 62px; height: 62px; }
+  #tb-fire {
+    left: calc(18px + env(safe-area-inset-left)); bottom: calc(48px + env(safe-area-inset-bottom));
+    width: 92px; height: 92px; border-radius: 50%;
+    font-size: 15px; letter-spacing: 2px; color: #ffe135;
+    border-color: rgba(255, 20, 147, 0.7);
+  }
+  #tb-pause { top: 8px; right: 86px; width: 44px; height: 36px; font-size: 16px; }
+  /* touch devices: keyboard hint is noise, hp bar moves clear of the fire button */
+  #touch-ui.active ~ #hud #hint, #hud.touch #hint { display: none; }
+  #hud.touch #hpwrap { bottom: 152px; }
+  #hud.touch .threat { bottom: 200px; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.min.js",
+    "three/addons/": "./vendor/addons/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="game-root">
+  <div id="hud">
+    <div id="fps"></div>
+    <div id="stats">
+      <div id="score">SCORE 000000</div>
+      <div id="dist">0.0 KM</div>
+    </div>
+    <div id="hpwrap"><div id="hpbar"></div></div>
+    <div id="threat-l" class="threat">◀</div>
+    <div id="threat-r" class="threat">▶</div>
+    <div id="combo"></div>
+    <div id="hint">ARROWS — DRIVE&nbsp;&nbsp;·&nbsp;&nbsp;SPACE — SHOOT&nbsp;&nbsp;·&nbsp;&nbsp;P — PAUSE&nbsp;&nbsp;·&nbsp;&nbsp;M — MUTE</div>
+  </div>
+  <div id="screens">
+    <div id="title-screen" class="screen">
+      <div class="title">DESERT CHASE</div>
+      <div class="subtitle">ROAD RASH &times; NEED FOR SPEED</div>
+      <div class="start">CLICK OR PRESS ANY KEY TO DRIVE</div>
+    </div>
+    <div id="pause-screen" class="screen hidden">
+      <div class="title" style="font-size:42px;">PAUSED</div>
+      <div class="start">P TO RESUME</div>
+    </div>
+    <div id="dead-screen" class="screen hidden">
+      <div class="title" style="color:#ff1493; text-shadow: 0 0 18px rgba(255,20,147,.8), 3px 3px 0 #ffe135;">WRECKED</div>
+      <div id="final-score" class="subtitle"></div>
+      <div id="best-score" class="subtitle" style="color:#ffe135;"></div>
+      <div class="start">CLICK OR PRESS R TO RIDE AGAIN</div>
+    </div>
+  </div>
+  <div id="touch-ui">
+    <div id="tb-fire" class="tbtn">FIRE</div>
+    <div id="tb-up" class="tbtn">▲</div>
+    <div id="tb-down" class="tbtn">▼</div>
+    <div id="tb-left" class="tbtn">◀</div>
+    <div id="tb-right" class="tbtn">▶</div>
+    <div id="tb-pause" class="tbtn">II</div>
+  </div>
+  <div id="err">Couldn't load the game engine. Try refreshing.</div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+// ===================================================================
+// 01. CONFIG — every tunable lives here. Nothing magic elsewhere.
+// ===================================================================
+const CONFIG = Object.freeze({
+  // world
+  WORLD_SPEED: 40,            // m/s, base treadmill speed
+  ROAD_WIDTH: 14,
+  ROAD_HALF: 7,
+  SEG_LEN: 50,
+  SEG_COUNT: 8,               // 400 m of road in the ring buffer
+  FOG_NEAR: 60,
+  FOG_FAR: 280,
+
+  // player
+  PLAYER_X_MAX: 5.4,          // lateral clamp (keeps the car inside the edge lines)
+  PLAYER_LAT_SPEED: 15,       // m/s target lateral speed
+  PLAYER_LAT_DAMP: 8,         // responsiveness of lateral velocity
+  PLAYER_Z_MIN: -8,           // forward press range (negative = ahead)
+  PLAYER_Z_MAX: 8,
+  PLAYER_Z_SPEED: 9,
+
+  // camera
+  CAM_FOV: 62,
+  CAM_HEIGHT: 5.4,
+  CAM_BACK: 11.5,             // distance behind player
+  CAM_DAMP: 4.5,
+  CAM_LOOK_AHEAD: 22,
+
+  // render
+  MAX_DPR: 1.5,
+  SHADOW_MAP: 1024,
+  EXPOSURE: 1.1,
+
+  // props
+  CACTUS_COUNT: 26,
+  ROCK_COUNT: 22,
+  POLE_COUNT: 16,
+  POLE_SPACING: 30,
+  PROP_RANGE: 400,            // recycle distance for scattered props
+  MESA_COUNT: 14,
+  MESA_RANGE: 700,
+
+  // combat (V1)
+  FIRE_COOLDOWN: 0.35,
+  BULLET_SPEED: 90,           // m/s relative to the scene (player frame)
+  BULLET_LIFE: 1.5,
+  BULLET_SPREAD: 0.014,       // radians-ish lateral jitter
+  AIM_ASSIST_X: 2.5,          // lateral window for soft target snap
+  CAR_HALF_W: 1.0,
+  CAR_HALF_L: 2.1,
+  PLAYER_HP: 100,
+  RAM_DAMAGE: 15,
+  RAM_INVULN: 0.6,
+
+  // npcs
+  NPC_POOL: 10,
+  NPC_HP: 3,
+  TRAFFIC_MAX: 2,
+  TRAFFIC_INTERVAL: 5,        // s between traffic spawn attempts
+  TRAFFIC_SPEED_MIN: 26,
+  TRAFFIC_SPEED_MAX: 34,
+
+  // enemy AI (V2) — fairness caps live here
+  ENEMY_TOP_SPEED_MULT: 1.10, // never faster than 110% of world speed
+  ENEMY_REACT_FLOOR: 0.25,    // s, minimum dodge reaction
+  ENEMY_BULLET_SPEED: 55,
+  ENEMY_BULLET_DMG: 7,
+  ENEMY_MAX_FIRING: 2,        // max NPCs in ENGAGE-and-firing at once
+  ALIGN_TIME: 0.5,            // s of player lane-alignment before dodge triggers
+  ALIGN_X: 1.6,
+  DODGE_DURATION: 0.6,
+  RETREAT_HP_FRAC: 0.34,
+  BRUISER_LUNGE_MIN: 4,       // s between ram attempts
+  BRUISER_LUNGE_MAX: 7,
+
+  // difficulty ramp (V2): d = 1 - exp(-t/RAMP_TAU) + kills bonus
+  RAMP_TAU: 240,
+  RAMP_KILL_BONUS: 0.005,
+  RAMP_FLOOR: 0.15,           // opening minutes still have teeth
+  SPAWN_INTERVAL_0: 6,   SPAWN_INTERVAL_1: 2.5,
+  MAX_ENEMIES_0: 2,      MAX_ENEMIES_1: 5,
+  ENEMY_HP_0: 3,         ENEMY_HP_1: 5,
+  AIM_ERR_0: 2.0,        AIM_ERR_1: 0.6,
+  FIRE_CD_0: 2.2,        FIRE_CD_1: 1.4,
+  BRUISER_SHARE_0: 0,    BRUISER_SHARE_1: 0.35,
+  WORLD_SPEED_0: 40,     WORLD_SPEED_1: 52,
+
+  // fx
+  BULLET_POOL: 64,
+  PARTICLE_COUNT: 600,
+  SPEEDLINE_COUNT: 14,
+
+  // post + juice (V3)
+  BLOOM_STRENGTH: 0.45,
+  BLOOM_RADIUS: 0.5,
+  BLOOM_THRESHOLD: 0.82,
+  WATCHDOG_MS: 20,            // avg frame ms that trips the bloom kill-switch
+  FOV_KICK: 10,               // extra degrees at top speed
+  SHAKE_BASE: 0.05,           // speed-driven shake amplitude
+  CURVE_A1: 5.0,  CURVE_F1: 1 / 170,
+  CURVE_A2: 2.5,  CURVE_F2: 1 / 73,
+
+  // feuds (ambient gunfights ahead)
+  FEUD_INTERVAL: 24,
+  FEUD_MIN_DIFFICULTY: 0.2,
+  FEUD_ENGAGE_RANGE: 80,
+  COMBO_WINDOW: 4,            // s between kills to keep the streak
+
+  // audio master switch — flip to true to re-enable the synth (engine, shots, music)
+  AUDIO_ENABLED: false,
+
+  // loop
+  STEP: 1 / 60,
+  MAX_STEPS: 5,
+});
+
+// ===================================================================
+// 02. PALETTE — locked golden-hour / synthwave colors
+// ===================================================================
+const PALETTE = Object.freeze({
+  SKY_HORIZON: 0xFFB347,
+  SKY_MID:     0xFF8C42,
+  SKY_TOP:     0x9D6BA8,
+  SUN:         0xFFE135,
+  FOG:         0xF4AE7C,
+  SAND_LIGHT:  0xE2A56F,
+  SAND_DARK:   0xD2691E,
+  MESA_DARK:   0x8B4513,
+  MESA_LIGHT:  0xA0522D,
+  ASPHALT:     0x5A5A5A,
+  ASPHALT_DK:  0x3D3D3D,
+  ACCENT_PINK: 0xFF1493,
+  CACTUS:      0x9DC183,
+  POLE:        0x5C4033,
+  HEMI_GROUND: 0x8A6A4F,
+  CAR_BODY:    0xF2E9D8,
+  CAR_GLASS:   0x1A1A22,
+  TIRE:        0x1A1A1A,
+  DRIVER_SKIN: 0xD9A066,
+  DRIVER_SUIT: 0x2A2A3A,
+  TRACER:      0xFFE135,
+  NPC_COLORS:  [0x3FB8AF, 0x8E3B46, 0x2E4057, 0xD8A03D, 0x6B4E9B],
+});
+
+// ===================================================================
+// 03. INPUT — polled key state with edge detection
+// ===================================================================
+const HANDLED_KEYS = new Set([
+  'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+  'Space', 'KeyP', 'KeyM', 'KeyR',
+]);
+const keys = new Set();
+const pressed = new Set();   // one-shot edges, cleared at end of update
+
+window.addEventListener('keydown', (e) => {
+  if (HANDLED_KEYS.has(e.code)) e.preventDefault();
+  if (!e.repeat && !keys.has(e.code)) pressed.add(e.code);
+  keys.add(e.code);
+  if (game.state === 'TITLE') startGame();
+  else if (game.state === 'DEAD' && e.code === 'KeyR') restart();
+  else if (e.code === 'KeyP' && !e.repeat) togglePause();
+  if (e.code === 'KeyM' && !e.repeat) toggleMute();
+});
+window.addEventListener('keyup', (e) => keys.delete(e.code));
+window.addEventListener('blur', () => keys.clear());
+
+// ===================================================================
+// 04. UTILS
+// ===================================================================
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+// frame-rate independent exponential approach
+const damp = (cur, target, rate, dt) => lerp(cur, target, 1 - Math.exp(-rate * dt));
+
+// tiny seeded RNG (mulberry32) — deterministic prop/mesa layout
+function rng(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s |= 0; s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const _c1 = new THREE.Color();
+const _c2 = new THREE.Color();
+const _dummy = new THREE.Object3D();
+
+// ===================================================================
+// 05. RENDER SETUP
+// ===================================================================
+const root = document.getElementById('game-root');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.MAX_DPR));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = CONFIG.EXPOSURE;
+renderer.domElement.tabIndex = 0;
+root.prepend(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(PALETTE.FOG, CONFIG.FOG_NEAR, CONFIG.FOG_FAR);
+
+const camera = new THREE.PerspectiveCamera(
+  CONFIG.CAM_FOV, window.innerWidth / window.innerHeight, 0.1, 2000);
+camera.position.set(0, CONFIG.CAM_HEIGHT, CONFIG.CAM_BACK);
+
+// lights — warm hemisphere + low golden sun
+const hemi = new THREE.HemisphereLight(PALETTE.SKY_HORIZON, PALETTE.HEMI_GROUND, 0.95);
+scene.add(hemi);
+
+const sun = new THREE.DirectionalLight(PALETTE.SUN, 1.5);
+sun.position.set(18, 26, -60);          // low ahead-right: long shadows toward camera
+sun.castShadow = true;
+sun.shadow.mapSize.set(CONFIG.SHADOW_MAP, CONFIG.SHADOW_MAP);
+sun.shadow.camera.left = -30;
+sun.shadow.camera.right = 30;
+sun.shadow.camera.top = 30;
+sun.shadow.camera.bottom = -30;
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 150;
+sun.shadow.bias = -0.001;
+scene.add(sun);
+scene.add(sun.target);
+
+// --- post chain: render → bloom (half-res) → vignette/grade → output ---
+const GradeShader = {
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    varying vec2 vUv;
+    void main() {
+      vec4 c = texture2D(tDiffuse, vUv);
+      c.rgb *= vec3(1.05, 0.99, 0.97);                       // warm cast
+      float d = distance(vUv, vec2(0.5));
+      c.rgb *= 1.0 - smoothstep(0.45, 0.85, d) * 0.32;       // vignette
+      gl_FragColor = c;
+    }`,
+};
+
+const post = { composer: null, bloom: null, enabled: true, frameMs: 0, frames: 0, clock: 0 };
+
+function setupPost() {
+  const w = window.innerWidth, h = window.innerHeight;
+  post.composer = new EffectComposer(renderer);
+  post.composer.addPass(new RenderPass(scene, camera));
+  post.bloom = new UnrealBloomPass(new THREE.Vector2(w / 2, h / 2),
+    CONFIG.BLOOM_STRENGTH, CONFIG.BLOOM_RADIUS, CONFIG.BLOOM_THRESHOLD);
+  post.composer.addPass(post.bloom);
+  post.composer.addPass(new ShaderPass(GradeShader));
+  post.composer.addPass(new OutputPass());
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  if (post.composer) post.composer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ===================================================================
+// 06. GEOMETRY FACTORY — pure builders, all procedural
+// ===================================================================
+
+// vertex-color helper: paint every vertex of a geometry with fn(x,y,z) -> Color
+function paintVertices(geo, fn) {
+  const pos = geo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    const c = fn(pos.getX(i), pos.getY(i), pos.getZ(i));
+    colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return geo;
+}
+
+function flatMat(opts = {}) {
+  return new THREE.MeshStandardMaterial({
+    flatShading: true, roughness: 1.0, metalness: 0.0, ...opts,
+  });
+}
+
+// --- sky dome: inverted sphere with vertex-color gradient ---
+function buildSky() {
+  const geo = new THREE.SphereGeometry(900, 24, 16);
+  const horizon = _c1.set(PALETTE.SKY_HORIZON).clone();
+  const mid = _c1.set(PALETTE.SKY_MID).clone();
+  const top = _c1.set(PALETTE.SKY_TOP).clone();
+  paintVertices(geo, (x, y) => {
+    const t = clamp(y / 900, -1, 1);
+    const c = new THREE.Color();
+    if (t <= 0.04) c.lerpColors(horizon, horizon, 0);               // below horizon band
+    else if (t < 0.30) c.lerpColors(horizon, mid, (t - 0.04) / 0.26);
+    else c.lerpColors(mid, top, Math.min((t - 0.30) / 0.55, 1));
+    return c;
+  });
+  const mat = new THREE.MeshBasicMaterial({
+    vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.renderOrder = -10;
+  return mesh;
+}
+
+// --- sun disc + canvas glow sprite ---
+function buildSun() {
+  const group = new THREE.Group();
+  const disc = new THREE.Mesh(
+    new THREE.CircleGeometry(42, 32),
+    new THREE.MeshBasicMaterial({ color: PALETTE.SUN, fog: false }));
+  group.add(disc);
+
+  const cnv = document.createElement('canvas');
+  cnv.width = cnv.height = 256;
+  const ctx = cnv.getContext('2d');
+  const g = ctx.createRadialGradient(128, 128, 10, 128, 128, 128);
+  g.addColorStop(0, 'rgba(255, 225, 53, 0.85)');
+  g.addColorStop(0.35, 'rgba(255, 140, 66, 0.45)');
+  g.addColorStop(0.7, 'rgba(255, 20, 147, 0.12)');
+  g.addColorStop(1, 'rgba(255, 20, 147, 0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 256, 256);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(cnv), fog: false, transparent: true, depthWrite: false,
+  }));
+  glow.scale.set(380, 380, 1);
+  group.add(glow);
+
+  group.position.set(-90, 48, -780);
+  return group;
+}
+
+// --- road marking texture: one 50 m segment of asphalt, dashes, edge lines ---
+function buildRoadTexture() {
+  const W = 256, H = 1024;          // H maps to 50 m
+  const cnv = document.createElement('canvas');
+  cnv.width = W; cnv.height = H;
+  const ctx = cnv.getContext('2d');
+
+  ctx.fillStyle = '#5A5A5A';
+  ctx.fillRect(0, 0, W, H);
+
+  // speckle noise — scroll speed cue
+  const r = rng(1234);
+  for (let i = 0; i < 1600; i++) {
+    ctx.fillStyle = r() > 0.5 ? 'rgba(61,61,61,0.5)' : 'rgba(110,104,98,0.35)';
+    ctx.fillRect(Math.floor(r() * W), Math.floor(r() * H), 2 + r() * 3, 2 + r() * 3);
+  }
+
+  // edge lines (white, slightly warm)
+  ctx.fillStyle = '#E8DCC8';
+  const edgeInset = Math.round(W * (0.6 / CONFIG.ROAD_WIDTH)); // 0.6 m from edge
+  ctx.fillRect(edgeInset, 0, 5, H);
+  ctx.fillRect(W - edgeInset - 5, 0, 5, H);
+
+  // center dashes (warm yellow), 5 m period: 3 m dash / 2 m gap
+  ctx.fillStyle = '#E8C04A';
+  const period = H / 10;            // 10 cycles of 5 m
+  const dashLen = period * 0.6;
+  for (let y = 0; y < H; y += period) ctx.fillRect(W / 2 - 4, y, 8, dashLen);
+
+  const tex = new THREE.CanvasTexture(cnv);
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// --- one road segment: road quad + jittered desert ground patch ---
+function buildRoadSegment(roadTex, seed) {
+  const group = new THREE.Group();
+
+  const roadGeo = new THREE.PlaneGeometry(CONFIG.ROAD_WIDTH, CONFIG.SEG_LEN);
+  roadGeo.rotateX(-Math.PI / 2);
+  const road = new THREE.Mesh(roadGeo, new THREE.MeshStandardMaterial({
+    map: roadTex, roughness: 1.0, metalness: 0.0,
+  }));
+  road.position.y = 0.02;
+  road.receiveShadow = true;
+  group.add(road);
+
+  // desert ground: wide plane, vertex jitter + sand color variation.
+  // Edge rows (z extremes) stay y=0 so seams between segments never crack.
+  const W = 240, SEGS_X = 24, SEGS_Z = 10;
+  const gGeo = new THREE.PlaneGeometry(W, CONFIG.SEG_LEN, SEGS_X, SEGS_Z);
+  gGeo.rotateX(-Math.PI / 2);
+  const r = rng(seed);
+  const pos = gGeo.attributes.position;
+  const sandA = new THREE.Color(PALETTE.SAND_LIGHT);
+  const sandB = new THREE.Color(PALETTE.SAND_DARK);
+  const colors = new Float32Array(pos.count * 3);
+  const halfZ = CONFIG.SEG_LEN / 2;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), z = pos.getZ(i);
+    const nearRoad = Math.abs(x) < CONFIG.ROAD_HALF + 3;
+    const edgeRow = Math.abs(Math.abs(z) - halfZ) < 0.01;
+    if (!nearRoad && !edgeRow) {
+      const d = (Math.abs(x) - CONFIG.ROAD_HALF) / (W / 2);
+      pos.setY(i, r() * 1.6 * d + Math.sin(x * 0.08) * 0.8 * d);
+    }
+    _c1.lerpColors(sandA, sandB, r() * 0.55 + (nearRoad ? 0.25 : 0));
+    colors[i * 3] = _c1.r; colors[i * 3 + 1] = _c1.g; colors[i * 3 + 2] = _c1.b;
+  }
+  gGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  gGeo.computeVertexNormals();
+  const ground = new THREE.Mesh(gGeo, flatMat({ vertexColors: true }));
+  ground.position.y = -0.05;
+  ground.receiveShadow = true;
+  group.add(ground);
+
+  return group;
+}
+
+// --- mesa: cylinder with randomized radial profile, flat top ---
+function buildMesa(seed) {
+  const r = rng(seed);
+  const height = 28 + r() * 55;
+  const radius = 22 + r() * 42;
+  const geo = new THREE.CylinderGeometry(radius * (0.7 + r() * 0.2), radius * 1.15, height, 9, 3);
+  geo.translate(0, height / 2, 0);
+
+  // jitter each radial column by a per-angle factor for a craggy profile
+  const pos = geo.attributes.position;
+  const angleScale = [];
+  for (let a = 0; a < 12; a++) angleScale.push(0.8 + r() * 0.45);
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), z = pos.getZ(i);
+    const radial = Math.sqrt(x * x + z * z);
+    if (radial < 0.001) continue;
+    const ang = Math.atan2(z, x) + Math.PI;
+    const f = angleScale[Math.floor(ang / (Math.PI * 2) * 12) % 12];
+    pos.setX(i, x * f);
+    pos.setZ(i, z * f);
+  }
+
+  const dark = new THREE.Color(PALETTE.MESA_DARK);
+  const light = new THREE.Color(PALETTE.MESA_LIGHT);
+  paintVertices(geo, (x, y) => {
+    const c = new THREE.Color();
+    c.lerpColors(dark, light, clamp(y / height, 0, 1) * 0.9);
+    return c;
+  });
+  geo.computeVertexNormals();
+  return new THREE.Mesh(geo, flatMat({ vertexColors: true }));
+}
+
+// --- props: merged geometries for InstancedMesh ---
+function buildCactusGeo() {
+  const trunk = new THREE.CylinderGeometry(0.22, 0.3, 2.6, 6);
+  trunk.translate(0, 1.3, 0);
+  const armL = new THREE.CylinderGeometry(0.14, 0.16, 1.1, 5);
+  armL.rotateZ(Math.PI / 2.4);
+  armL.translate(-0.55, 1.5, 0);
+  const armLUp = new THREE.CylinderGeometry(0.13, 0.14, 0.9, 5);
+  armLUp.translate(-0.86, 2.2, 0);
+  const armR = new THREE.CylinderGeometry(0.14, 0.16, 0.9, 5);
+  armR.rotateZ(-Math.PI / 2.4);
+  armR.translate(0.5, 1.1, 0);
+  const armRUp = new THREE.CylinderGeometry(0.13, 0.14, 0.8, 5);
+  armRUp.translate(0.78, 1.7, 0);
+  return mergeGeometries([trunk, armL, armLUp, armR, armRUp]);
+}
+
+function buildRockGeo() {
+  const geo = new THREE.IcosahedronGeometry(0.9, 0);
+  const r = rng(77);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    pos.setXYZ(i,
+      pos.getX(i) * (0.75 + r() * 0.5),
+      Math.abs(pos.getY(i)) * (0.55 + r() * 0.4),
+      pos.getZ(i) * (0.75 + r() * 0.5));
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function buildPoleGeo() {
+  const post = new THREE.CylinderGeometry(0.1, 0.13, 6.4, 6);
+  post.translate(0, 3.2, 0);
+  const arm = new THREE.BoxGeometry(2.0, 0.12, 0.12);
+  arm.translate(0, 5.9, 0);
+  const arm2 = new THREE.BoxGeometry(1.5, 0.1, 0.1);
+  arm2.translate(0, 5.4, 0);
+  return mergeGeometries([post, arm, arm2]);
+}
+
+// --- driver figure: torso + head + pistol arm, pivots at the seat ---
+function buildDriver() {
+  const g = new THREE.Group();
+  const torso = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.16, 0.2, 0.5, 6), flatMat({ color: PALETTE.DRIVER_SUIT }));
+  torso.position.y = 0.25;
+  g.add(torso);
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.14, 6, 5), flatMat({ color: PALETTE.DRIVER_SKIN }));
+  head.position.y = 0.62;
+  g.add(head);
+  const arm = new THREE.Mesh(
+    new THREE.BoxGeometry(0.08, 0.08, 0.5), flatMat({ color: PALETTE.DRIVER_SUIT }));
+  arm.position.set(0, 0.5, -0.32);
+  g.add(arm);
+  const gun = new THREE.Mesh(
+    new THREE.BoxGeometry(0.05, 0.14, 0.24), flatMat({ color: 0x111111 }));
+  gun.position.set(0, 0.5, -0.66);
+  g.add(gun);
+  g.userData.gun = gun;
+  return g;
+}
+
+// --- low-poly car: body + cabin + wheels + pink trim; bodyColor varies per NPC ---
+function buildCar(bodyColor = PALETTE.CAR_BODY) {
+  const group = new THREE.Group();
+  const tintables = [];          // materials darkened in wreck mode
+  const track = (mat) => { tintables.push({ mat, orig: mat.color.getHex() }); return mat; };
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(1.9, 0.52, 4.1), track(flatMat({ color: bodyColor })));
+  body.position.y = 0.55;
+  body.castShadow = true;
+  group.add(body);
+
+  // dark under-tray: closes the see-through gap beneath the body
+  const tray = new THREE.Mesh(
+    new THREE.BoxGeometry(1.8, 0.22, 4.0), flatMat({ color: PALETTE.TIRE }));
+  tray.position.y = 0.24;
+  group.add(tray);
+
+  // hood wedge — chamfered front, integrated into the body line
+  const nose = new THREE.Mesh(
+    new THREE.BoxGeometry(1.8, 0.34, 1.0), track(flatMat({ color: bodyColor })));
+  nose.position.set(0, 0.44, -2.25);
+  nose.rotation.x = 0.14;
+  nose.castShadow = true;
+  group.add(nose);
+
+  // cabin: dark glass band with a body-colored roof so it doesn't read as a slab
+  const cabin = new THREE.Mesh(
+    new THREE.BoxGeometry(1.55, 0.42, 1.7), flatMat({ color: PALETTE.CAR_GLASS, roughness: 0.4 }));
+  cabin.position.set(0, 0.97, 0.45);
+  cabin.castShadow = true;
+  group.add(cabin);
+  const roof = new THREE.Mesh(
+    new THREE.BoxGeometry(1.62, 0.1, 1.78), track(flatMat({ color: bodyColor })));
+  roof.position.set(0, 1.22, 0.45);
+  roof.castShadow = true;
+  group.add(roof);
+
+  // pink trim stripes down both flanks
+  const stripeMat = track(flatMat({
+    color: PALETTE.ACCENT_PINK, emissive: PALETTE.ACCENT_PINK, emissiveIntensity: 0.55,
+  }));
+  for (const side of [-1, 1]) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.1, 3.9), stripeMat);
+    stripe.position.set(side * 0.97, 0.62, 0);
+    group.add(stripe);
+  }
+
+  // taillight bar — also the dodge-telegraph brake light
+  const tail = new THREE.Mesh(
+    new THREE.BoxGeometry(1.7, 0.12, 0.06),
+    flatMat({ color: 0xFF2255, emissive: 0xFF2255, emissiveIntensity: 1.4 }));
+  tail.position.set(0, 0.62, 2.06);
+  group.add(tail);
+  group.userData.tail = tail;
+
+  // wheels — cylinder axis pre-rotated onto x so rotation.x spins the axle
+  const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.32, 10);
+  wheelGeo.rotateZ(Math.PI / 2);
+  const wheelMat = flatMat({ color: PALETTE.TIRE, roughness: 0.9 });
+  const wheels = [];
+  for (const [wx, wz] of [[-0.85, -1.35], [0.85, -1.35], [-0.85, 1.35], [0.85, 1.35]]) {
+    const w = new THREE.Mesh(wheelGeo, wheelMat);
+    w.position.set(wx, 0.38, wz);
+    w.castShadow = true;
+    group.add(w);
+    wheels.push(w);
+  }
+  group.userData.wheels = wheels;
+  group.userData.tintables = tintables;
+  return group;
+}
+
+function setWreckTint(carMesh, on) {
+  for (const t of carMesh.userData.tintables) {
+    if (on) t.mat.color.setHex(t.orig).multiplyScalar(0.22);
+    else t.mat.color.setHex(t.orig);
+    if (t.mat.emissive) t.mat.emissiveIntensity = on ? 0 : 0.55;
+  }
+}
+
+// ===================================================================
+// 07. WORLD / TREADMILL — segments, props, mesas; world moves +z
+// ===================================================================
+const world = {
+  segments: [],
+  mesas: [],          // { mesh, band } — band: 0.25 or 0.5 parallax factor
+  props: [],          // { inst, items: [{x,z,scale,rotY}], recycleZ, spawnZ }
+  poles: null,
+};
+
+function setupWorld() {
+  scene.add(buildSky());
+  scene.add(buildSun());
+
+  const roadTex = buildRoadTexture();
+  for (let i = 0; i < CONFIG.SEG_COUNT; i++) {
+    const seg = buildRoadSegment(roadTex, 9000 + i);
+    // stack from +25 (just behind camera) back into the fog
+    seg.position.z = 25 - i * CONFIG.SEG_LEN;
+    scene.add(seg);
+    world.segments.push(seg);
+  }
+
+  // mesas: two parallax bands
+  const r = rng(555);
+  for (let i = 0; i < CONFIG.MESA_COUNT; i++) {
+    const far = i % 2 === 0;
+    const mesa = buildMesa(3000 + i * 17);
+    const side = r() > 0.5 ? 1 : -1;
+    mesa.position.set(
+      side * (far ? 160 + r() * 180 : 75 + r() * 80),
+      0,
+      60 - r() * CONFIG.MESA_RANGE);
+    const s = far ? 0.9 + r() * 0.7 : 0.45 + r() * 0.4;
+    mesa.scale.setScalar(s);
+    scene.add(mesa);
+    world.mesas.push({ mesh: mesa, band: far ? 0.25 : 0.5, side });
+  }
+
+  // scattered props: cacti + rocks
+  const propDefs = [
+    { geo: buildCactusGeo(), color: PALETTE.CACTUS, count: CONFIG.CACTUS_COUNT, scaleMin: 0.7, scaleMax: 1.6 },
+    { geo: buildRockGeo(), color: PALETTE.MESA_LIGHT, count: CONFIG.ROCK_COUNT, scaleMin: 0.5, scaleMax: 2.2 },
+  ];
+  for (const def of propDefs) {
+    const inst = new THREE.InstancedMesh(def.geo, flatMat({ color: def.color }), def.count);
+    inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    const items = [];
+    const pr = rng(def.count * 100 + 7);
+    for (let i = 0; i < def.count; i++) {
+      items.push({
+        x: (pr() > 0.5 ? 1 : -1) * (CONFIG.ROAD_HALF + 4 + pr() * 60),
+        z: 40 - pr() * CONFIG.PROP_RANGE,
+        scale: def.scaleMin + pr() * (def.scaleMax - def.scaleMin),
+        rotY: pr() * Math.PI * 2,
+      });
+    }
+    scene.add(inst);
+    world.props.push({ inst, items, rng: pr });
+  }
+
+  // telegraph poles: evenly spaced down the right shoulder
+  const poleInst = new THREE.InstancedMesh(
+    buildPoleGeo(), flatMat({ color: PALETTE.POLE }), CONFIG.POLE_COUNT);
+  poleInst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  const poleItems = [];
+  for (let i = 0; i < CONFIG.POLE_COUNT; i++) {
+    poleItems.push({ x: CONFIG.ROAD_HALF + 3.5, z: 40 - i * CONFIG.POLE_SPACING, scale: 1, rotY: 0 });
+  }
+  scene.add(poleInst);
+  world.poles = { inst: poleInst, items: poleItems };
+}
+
+// render-only road curvature: lane logic stays straight, the world bends.
+// Deterministic from distance → recycled segments always land on the curve.
+function curveX(D) {
+  return CONFIG.CURVE_A1 * Math.sin(D * CONFIG.CURVE_F1) +
+         CONFIG.CURVE_A2 * Math.sin(D * CONFIG.CURVE_F2);
+}
+function curveOffset(z) {
+  return curveX(game.distance - z) - curveX(game.distance);
+}
+
+function updateWorld(dt) {
+  const move = game.worldSpeed * dt;
+
+  // road ring buffer
+  for (const seg of world.segments) {
+    seg.position.z += move;
+    if (seg.position.z - CONFIG.SEG_LEN / 2 > camera.position.z + 8) {
+      seg.position.z -= CONFIG.SEG_COUNT * CONFIG.SEG_LEN;
+    }
+    // lay the segment along the curve polyline
+    const h = CONFIG.SEG_LEN / 2;
+    const xFar = curveOffset(seg.position.z - h), xNear = curveOffset(seg.position.z + h);
+    seg.position.x = (xFar + xNear) / 2;
+    seg.rotation.y = -(xFar - xNear) / CONFIG.SEG_LEN;
+  }
+
+  // mesas — parallax bands, recycle far out beyond the fog
+  for (const m of world.mesas) {
+    m.mesh.position.z += move * m.band;
+    if (m.mesh.position.z > camera.position.z + 80) {
+      m.mesh.position.z -= CONFIG.MESA_RANGE + 100;
+    }
+  }
+
+  // scattered props
+  for (const p of world.props) {
+    let dirty = false;
+    for (const it of p.items) {
+      it.z += move;
+      if (it.z > camera.position.z + 12) {
+        it.z -= CONFIG.PROP_RANGE;
+        it.x = (p.rng() > 0.5 ? 1 : -1) * (CONFIG.ROAD_HALF + 4 + p.rng() * 60);
+        it.rotY = p.rng() * Math.PI * 2;
+      }
+      dirty = true;
+    }
+    if (dirty) writeInstances(p.inst, p.items);
+  }
+
+  // poles — fixed spacing, plain recycle
+  for (const it of world.poles.items) {
+    it.z += move;
+    if (it.z > camera.position.z + 12) it.z -= CONFIG.POLE_COUNT * CONFIG.POLE_SPACING;
+  }
+  writeInstances(world.poles.inst, world.poles.items);
+}
+
+function writeInstances(inst, items) {
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    _dummy.position.set(it.x + curveOffset(it.z), 0, it.z);
+    _dummy.rotation.set(0, it.rotY, 0);
+    _dummy.scale.setScalar(it.scale);
+    _dummy.updateMatrix();
+    inst.setMatrixAt(i, _dummy.matrix);
+  }
+  inst.instanceMatrix.needsUpdate = true;
+}
+
+// ===================================================================
+// 08. ENTITIES — player, NPC pool, bullet pool
+// ===================================================================
+const player = {
+  mesh: null, driver: null, flash: null, flashLight: null,
+  x: 0, z: 0,
+  vx: 0, vz: 0,
+  hp: CONFIG.PLAYER_HP,
+  fireCooldown: 0,
+  fireHeat: 0,            // >0 while recently shooting → driver stays leaned out
+  lean: 0, leanSide: -1,  // -1 left, +1 right
+  invuln: 0,
+};
+
+// npc: archetype 'traffic' | 'gunner' | 'bruiser'
+// state: 'CRUISE' (traffic) | 'PURSUE' | 'ENGAGE' | 'DODGE' | 'RETREAT'
+const npcs = [];
+const bullets = [];  // { active, owner, mesh, x, z, vx, vz, life, prevX, prevZ }
+
+function setupPlayer() {
+  player.mesh = buildCar();
+  player.driver = buildDriver();
+  player.driver.position.set(-0.38, 0.5, 0.45);
+  player.mesh.add(player.driver);
+
+  // muzzle flash: additive quad + point light, reused per shot
+  const flash = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.65, 0.65),
+    new THREE.MeshBasicMaterial({
+      color: PALETTE.TRACER, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+    }));
+  player.flash = flash;
+  scene.add(flash);
+  const flashLight = new THREE.PointLight(0xFFC04A, 0, 14);
+  player.flashLight = flashLight;
+  scene.add(flashLight);
+
+  scene.add(player.mesh);
+}
+
+function setupNpcs() {
+  for (let i = 0; i < CONFIG.NPC_POOL; i++) {
+    const mesh = buildCar(PALETTE.NPC_COLORS[i % PALETTE.NPC_COLORS.length]);
+    // every car gets a driver; gunners lean out of the window to shoot
+    const drv = buildDriver();
+    drv.position.set(-0.38, 0.5, 0.45);
+    mesh.add(drv);
+    mesh.userData.driver = drv;
+    mesh.visible = false;
+    scene.add(mesh);
+    npcs.push({
+      active: false, mesh, x: 0, z: 0, speed: 0, hp: 0, maxHp: 3, wreck: false, spinY: 0,
+      archetype: 'traffic', state: 'CRUISE', stateTime: 0,
+      vx: 0, targetX: 0, dodgeFromX: 0, reactTimer: -1, alignTimer: 0,
+      fireCooldown: 0, lungeTimer: 0, slotZ: 0, foe: null,
+      lean: 0, leanSide: -1, fireHeat: 0,
+    });
+  }
+}
+
+function setNpcState(npc, state) {
+  npc.state = state;
+  npc.stateTime = 0;
+}
+
+function setupBullets() {
+  const geo = new THREE.BoxGeometry(0.07, 0.07, 1.0);
+  for (let i = 0; i < CONFIG.BULLET_POOL; i++) {
+    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: PALETTE.TRACER }));
+    mesh.visible = false;
+    scene.add(mesh);
+    bullets.push({ active: false, mesh, x: 0, y: 0, z: 0, vx: 0, vz: 0, life: 0, prevX: 0, prevZ: 0 });
+  }
+}
+
+function acquireNpcInto(npc) {
+  npc.active = true;
+  npc.wreck = false;
+  npc.spinY = 0;
+  npc.vx = 0;
+  npc.foe = null;
+  npc.reactTimer = -1;
+  npc.alignTimer = 0;
+  npc.fireCooldown = 1 + Math.random();
+  npc.lean = 0;
+  npc.fireHeat = 0;
+  const drv = npc.mesh.userData.driver;
+  drv.position.set(-0.38, 0.5, 0.45);
+  drv.rotation.set(0, 0, 0);
+  setWreckTint(npc.mesh, false);
+  npc.mesh.userData.tail.material.emissiveIntensity = 1.4;
+  npc.mesh.rotation.set(0, 0, 0);
+  return npc;
+}
+
+function acquireNpc() {
+  const npc = npcs.find(n => !n.active);
+  return npc ? acquireNpcInto(npc) : null;
+}
+
+function spawnTraffic() {
+  const npc = acquireNpc();
+  if (!npc) return;
+  npc.archetype = 'traffic';
+  setNpcState(npc, 'CRUISE');
+  npc.hp = npc.maxHp = CONFIG.NPC_HP;
+  npc.speed = CONFIG.TRAFFIC_SPEED_MIN +
+    Math.random() * (CONFIG.TRAFFIC_SPEED_MAX - CONFIG.TRAFFIC_SPEED_MIN);
+  npc.x = [-4.5, -1.5, 1.5, 4.5][Math.floor(Math.random() * 4)] + (Math.random() - 0.5);
+  npc.z = -160 - Math.random() * 60;     // born fully fogged-out
+  npc.mesh.position.set(npc.x, 0, npc.z);
+  npc.mesh.visible = true;
+}
+
+function spawnEnemy(archetype, stage) {
+  const npc = acquireNpc();
+  if (!npc) return;
+  npc.archetype = archetype;
+  setNpcState(npc, 'PURSUE');
+  npc.hp = npc.maxHp = Math.round(stage.enemyHp) + (archetype === 'bruiser' ? 2 : 0);
+  npc.speed = game.worldSpeed;           // pursue logic accelerates from here
+  npc.x = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 3);
+  npc.z = camera.position.z + 25 + Math.random() * 15;   // roars up from behind
+  npc.slotZ = archetype === 'gunner' ? -(6 + Math.random() * 8) : 9; // gunner sits ahead-flank
+  npc.lungeTimer = CONFIG.BRUISER_LUNGE_MIN +
+    Math.random() * (CONFIG.BRUISER_LUNGE_MAX - CONFIG.BRUISER_LUNGE_MIN);
+  npc.mesh.position.set(npc.x, 0, npc.z);
+  npc.mesh.visible = true;
+}
+
+function releaseNpc(npc) {
+  npc.active = false;
+  npc.mesh.visible = false;
+  npc.foe = null;
+  // don't leave dangling duel partners pointing at a recycled car
+  for (const other of npcs) if (other.foe === npc) other.foe = null;
+}
+
+function updateNpcs(dt) {
+  for (const npc of npcs) {
+    if (!npc.active) continue;
+    if (npc.wreck) {
+      npc.speed = damp(npc.speed, 2, 2.5, dt);
+      npc.spinY += 4.5 * dt;
+      npc.mesh.rotation.y = npc.spinY;
+      npc.mesh.rotation.z = Math.min(npc.mesh.rotation.z + 0.4 * dt, 0.28);
+    }
+    npc.x += npc.vx * dt;
+    npc.z += (game.worldSpeed - npc.speed) * dt;
+    npc.mesh.position.set(npc.x + curveOffset(npc.z), 0, npc.z);
+    if (!npc.wreck) {
+      npc.mesh.rotation.y = -npc.vx * 0.03;
+      npc.mesh.rotation.z = -npc.vx * 0.015;
+      const spin = npc.speed / 0.38 * dt;
+      for (const w of npc.mesh.userData.wheels) w.rotation.x -= spin;
+
+      // driver leans out to shoot, twisting back when the target is behind him
+      npc.fireHeat = Math.max(0, npc.fireHeat - dt);
+      npc.lean = damp(npc.lean, npc.fireHeat > 0 ? 1 : 0, 10, dt);
+      if (npc.lean > 0.01) {
+        const drv = npc.mesh.userData.driver;
+        const targetBehind = npc.z < player.z - 2;       // gunners ahead shoot backward
+        drv.position.x = npc.leanSide * (0.38 + npc.lean * 0.72);
+        drv.position.y = 0.5 + npc.lean * 0.42;
+        drv.rotation.z = -npc.leanSide * npc.lean * 0.85;
+        drv.rotation.y = npc.lean * npc.leanSide * (targetBehind ? -2.6 : -0.18);
+      }
+    }
+    // release bound must clear the enemy spawn band (camera + 25..40)
+    if (npc.z > camera.position.z + 45 || npc.z < -260) releaseNpc(npc);
+  }
+
+  // npc-vs-npc separation: push apart overlapping live cars (≤45 pairs, cheap)
+  for (let i = 0; i < npcs.length; i++) {
+    const a = npcs[i];
+    if (!a.active || a.wreck) continue;
+    for (let j = i + 1; j < npcs.length; j++) {
+      const b = npcs[j];
+      if (!b.active || b.wreck) continue;
+      const dx = b.x - a.x, dz = b.z - a.z;
+      if (Math.abs(dx) < CONFIG.CAR_HALF_W * 2.2 && Math.abs(dz) < CONFIG.CAR_HALF_L * 2.1) {
+        const push = Math.sign(dx || (i < j ? 1 : -1)) * 0.06;
+        a.x = clamp(a.x - push, -CONFIG.ROAD_HALF + 1, CONFIG.ROAD_HALF - 1);
+        b.x = clamp(b.x + push, -CONFIG.ROAD_HALF + 1, CONFIG.ROAD_HALF - 1);
+        b.speed += (dz > 0 ? -0.3 : 0.3);             // also break z overlap
+      }
+    }
+  }
+}
+
+// ===================================================================
+// 09. AI — enemy state machine: PURSUE → ENGAGE → DODGE → RETREAT
+// ===================================================================
+function updateAI(dt, stage) {
+  const topSpeed = game.worldSpeed * CONFIG.ENEMY_TOP_SPEED_MULT;
+  let firingBudget = CONFIG.ENEMY_MAX_FIRING;   // fairness: only 2 gunners may engage-and-fire
+  for (const npc of npcs) {
+    if (!npc.active || npc.wreck || npc.archetype === 'traffic') continue;
+    npc.stateTime += dt;
+    npc.fireCooldown -= dt;
+
+    // retreat check beats everything
+    if (npc.state !== 'RETREAT' && npc.hp <= npc.maxHp * CONFIG.RETREAT_HP_FRAC) {
+      setNpcState(npc, 'RETREAT');
+      npc.mesh.userData.tail.material.emissiveIntensity = 1.4;
+    }
+
+    switch (npc.state) {
+      case 'PURSUE': {
+        // close from behind toward the slot near the player
+        npc.speed = damp(npc.speed, topSpeed, 1.6, dt);
+        const laneTarget = clamp(player.x + (npc.x > player.x ? 3 : -3),
+          -CONFIG.PLAYER_X_MAX, CONFIG.PLAYER_X_MAX);
+        npc.vx = damp(npc.vx, clamp((laneTarget - npc.x) * 2.2, -8, 8), 4, dt);
+        if (npc.z < player.z + npc.slotZ + 4) setNpcState(npc, 'ENGAGE');
+        break;
+      }
+      case 'ENGAGE': {
+        // rubber-band onto the slot, lazy lane drift, fire on cooldown
+        const slotErr = (player.z + npc.slotZ) - npc.z;
+        npc.speed = damp(npc.speed,
+          clamp(game.worldSpeed + slotErr * -1.2, game.worldSpeed * 0.85, topSpeed), 2.2, dt);
+        const laneTarget = clamp(player.x + (npc.x > player.x ? 2.8 : -2.8),
+          -CONFIG.PLAYER_X_MAX, CONFIG.PLAYER_X_MAX);
+        npc.vx = damp(npc.vx, clamp((laneTarget - npc.x) * 1.6, -6, 6), 3, dt);
+
+        if (npc.archetype === 'gunner') {
+          const mayFire = firingBudget > 0;
+          if (mayFire) firingBudget--;
+          if (mayFire && npc.fireCooldown <= 0 && Math.abs(npc.x - player.x) < 4) {
+            npc.fireCooldown = stage.fireCd * (0.85 + Math.random() * 0.3);
+            enemyFire(npc, stage);
+          }
+        } else { // bruiser: telegraphed ram lunges
+          npc.lungeTimer -= dt;
+          if (npc.lungeTimer <= -0.45) {
+            // lunge! burst toward the player
+            npc.lungeTimer = CONFIG.BRUISER_LUNGE_MIN +
+              Math.random() * (CONFIG.BRUISER_LUNGE_MAX - CONFIG.BRUISER_LUNGE_MIN);
+            npc.vx = clamp((player.x - npc.x) * 4, -10, 10);
+            npc.speed = topSpeed;
+          } else if (npc.lungeTimer <= 0) {
+            // telegraph window: brake light blazes before the hit
+            npc.mesh.userData.tail.material.emissiveIntensity = 4;
+          } else {
+            npc.mesh.userData.tail.material.emissiveIntensity = 1.4;
+          }
+        }
+
+        // dodge trigger: player lined up + leaning on this side, or a bullet inbound
+        const aligned = Math.abs(player.x - npc.x) < CONFIG.ALIGN_X &&
+          npc.z < player.z && player.fireHeat > 0;
+        npc.alignTimer = aligned ? npc.alignTimer + dt : 0;
+        const bulletInbound = playerBulletInLane(npc);
+        if (npc.reactTimer < 0 && (npc.alignTimer > CONFIG.ALIGN_TIME || bulletInbound)) {
+          npc.reactTimer = clamp(0.3 + Math.random() * 0.4 - 0.15 * game.difficulty,
+            CONFIG.ENEMY_REACT_FLOOR, 0.7);
+          // telegraph immediately: brake flash + lean toward escape lane
+          npc.dodgeFromX = npc.x;
+          npc.targetX = pickEscapeLane(npc);
+          npc.mesh.userData.tail.material.emissiveIntensity = 4;
+        }
+        if (npc.reactTimer >= 0) {
+          npc.reactTimer -= dt;
+          npc.mesh.rotation.y = -Math.sign(npc.targetX - npc.x) * 0.12;  // wheels hint
+          if (npc.reactTimer <= 0) {
+            setNpcState(npc, 'DODGE');
+            npc.reactTimer = -1;
+            npc.alignTimer = 0;
+          }
+        }
+        break;
+      }
+      case 'DODGE': {
+        const t = clamp(npc.stateTime / CONFIG.DODGE_DURATION, 0, 1);
+        const s = t * t * (3 - 2 * t);                   // smoothstep
+        npc.x = lerp(npc.dodgeFromX, npc.targetX, s);
+        npc.vx = 0;
+        // break z alignment too
+        npc.speed = damp(npc.speed, game.worldSpeed * (npc.slotZ < 0 ? 1.06 : 0.94), 3, dt);
+        if (t >= 1) {
+          npc.mesh.userData.tail.material.emissiveIntensity = 1.4;
+          setNpcState(npc, 'ENGAGE');
+        }
+        break;
+      }
+      case 'RETREAT': {
+        npc.speed = damp(npc.speed, game.worldSpeed * 0.8, 2, dt);
+        npc.vx = Math.sin(npc.stateTime * 3) * 2.2;      // wounded weave
+        // drifts behind and despawns via the z > camera bound in updateNpcs
+        break;
+      }
+      case 'FEUD': {
+        const foe = npc.foe;
+        const playerClose = (player.z - npc.z) < CONFIG.FEUD_ENGAGE_RANGE;
+        if (!foe || !foe.active || foe.wreck || playerClose) {
+          npc.foe = null;
+          setNpcState(npc, 'ENGAGE');                    // survivor turns on the player
+          break;
+        }
+        npc.speed = damp(npc.speed, game.worldSpeed * 0.97, 2, dt);
+        npc.vx = Math.sin(npc.stateTime * 1.7 + npc.slotZ) * 2.0;   // dueling weave
+        if (npc.fireCooldown <= 0) {
+          npc.fireCooldown = 1.1 + Math.random() * 0.6;
+          enemyBullet(npc, foe.x + (Math.random() - 0.5) * 2.4, foe.z);
+        }
+        break;
+      }
+    }
+  }
+}
+
+function pickEscapeLane(npc) {
+  // adjacent lane away from the player's side; clamp to road
+  const dir = npc.x >= player.x ? 1 : -1;
+  let target = npc.x + dir * 3.2;
+  if (Math.abs(target) > CONFIG.PLAYER_X_MAX) target = npc.x - dir * 3.2;
+  return clamp(target, -CONFIG.PLAYER_X_MAX, CONFIG.PLAYER_X_MAX);
+}
+
+function playerBulletInLane(npc) {
+  for (const b of bullets) {
+    if (!b.active || b.owner !== 'player') continue;
+    if (b.z > npc.z && Math.abs(b.x - npc.x) < CONFIG.ALIGN_X) return true;
+  }
+  return false;
+}
+
+function enemyFire(npc, stage) {
+  const t = Math.max((player.z - npc.z - 1.8) / CONFIG.ENEMY_BULLET_SPEED, 0.05);
+  const err = (Math.random() - 0.5) * 2 * stage.aimErr;
+  enemyBullet(npc, player.x + player.vx * t * 0.5 + err, player.z);
+}
+
+// shared enemy bullet: fired from npc toward (tx, tz)
+function enemyBullet(npc, tx, tz) {
+  const b = bullets.find(bb => !bb.active);
+  if (!b) return;
+  // the driver hangs out the window on the target's side to take the shot
+  npc.leanSide = Math.sign(tx - npc.x) || -1;
+  npc.fireHeat = 0.65;
+  b.active = true;
+  b.owner = 'npc';
+  b.shooter = npc;
+  b.x = b.prevX = npc.x + npc.leanSide * 0.95;
+  b.y = 1.0;
+  const dir = Math.sign(tz - npc.z) || 1;
+  b.z = b.prevZ = npc.z + dir * 1.8;                     // muzzle clear of own car
+  spawnBurst(b.x, 1.05, b.z, 4, PALETTE.TRACER, 3, 0.15); // muzzle flash puff
+  b.vz = dir * CONFIG.ENEMY_BULLET_SPEED;
+  const t = Math.max(Math.abs(tz - b.z) / CONFIG.ENEMY_BULLET_SPEED, 0.05);
+  b.vx = (tx - b.x) / t;
+  b.life = CONFIG.BULLET_LIFE;
+  b.mesh.material.color.setHex(PALETTE.ACCENT_PINK);     // enemy tracers read pink
+  b.mesh.visible = true;
+  b.mesh.position.set(b.x, b.y, b.z);
+  SFX.shoot(true);                                       // distant report
+}
+
+// ambient gunfight: two npcs dueling ahead until the player closes in
+function spawnFeud(stage) {
+  const a = npcs.find(n => !n.active);
+  const bN = npcs.filter(n => !n.active)[1];
+  if (!a || !bN) return;
+  const duo = [[a, -2.5, -175], [bN, 2.8, -187]];
+  for (const [npc, x, z] of duo) {
+    acquireNpcInto(npc);
+    npc.archetype = 'gunner';
+    setNpcState(npc, 'FEUD');
+    npc.hp = npc.maxHp = Math.round(stage.enemyHp);
+    npc.speed = game.worldSpeed * 0.97;                  // duel drifts back toward the player
+    npc.x = x;
+    npc.z = z;
+    npc.slotZ = -(6 + Math.random() * 8);
+    npc.mesh.position.set(npc.x, 0, npc.z);
+    npc.mesh.visible = true;
+  }
+  a.foe = bN;
+  bN.foe = a;
+}
+
+// ===================================================================
+// 10. COMBAT — firing, bullets, collisions, damage
+// ===================================================================
+function findAimTarget() {
+  let best = null, bestDz = Infinity;
+  for (const npc of npcs) {
+    if (!npc.active || npc.wreck) continue;
+    const dz = player.z - npc.z;                  // >0 → npc is ahead
+    if (dz < 3) continue;
+    if (Math.abs(npc.x - player.x) > CONFIG.AIM_ASSIST_X) continue;
+    if (dz < bestDz) { bestDz = dz; best = npc; }
+  }
+  return best;
+}
+
+function playerFire() {
+  const target = findAimTarget();
+  player.leanSide = target ? (target.x >= player.x ? 1 : -1) : -1;
+  player.fireHeat = 0.6;
+
+  const b = bullets.find(bb => !bb.active);
+  if (!b) return;
+  b.active = true;
+  b.owner = 'player';
+  b.mesh.material.color.setHex(PALETTE.TRACER);
+  b.x = b.prevX = player.x + player.leanSide * 0.95;
+  b.y = 1.05;
+  b.z = b.prevZ = player.z - 0.6;
+  b.vz = -CONFIG.BULLET_SPEED;
+  if (target) {
+    const t = (player.z - target.z) / CONFIG.BULLET_SPEED;
+    const predictedX = target.x + target.vx * t;  // lead strafing enemies
+    b.vx = (predictedX - b.x) / Math.max(t, 0.05);
+  } else {
+    b.vx = 0;
+  }
+  b.vx += (Math.random() - 0.5) * CONFIG.BULLET_SPREAD * CONFIG.BULLET_SPEED;
+  b.life = CONFIG.BULLET_LIFE;
+  b.mesh.visible = true;
+  b.mesh.position.set(b.x, b.y, b.z);
+  SFX.shoot();
+
+  // muzzle flash
+  player.flash.material.opacity = 0.95;
+  player.flash.position.set(b.x, b.y, b.z + 0.3);
+  player.flash.rotation.z = Math.random() * Math.PI;
+  player.flashLight.intensity = 14;
+  player.flashLight.position.set(b.x, b.y + 0.2, b.z);
+}
+
+function killNpc(npc, credit = true) {
+  spawnBurst(npc.x, 1.0, npc.z, 26, 0xFF8C42, 9, 0.8);
+  spawnBurst(npc.x, 1.2, npc.z, 14, PALETTE.TRACER, 12, 0.5);
+  spawnBurst(npc.x, 1.4, npc.z, 12, 0x3D3D3D, 4, 1.4);
+  npc.wreck = true;
+  setWreckTint(npc.mesh, true);
+  SFX.explode();
+  if (!credit) return;
+  game.kills++;
+  game.combo = game.comboTimer > 0 ? Math.min(game.combo + 1, 5) : 1;
+  game.comboTimer = CONFIG.COMBO_WINDOW;
+  game.score += 100 * game.combo;
+  if (game.combo > 1) showCombo(game.combo);
+}
+
+function hitNpc(npc, hx, hz, credit = true) {
+  spawnBurst(hx, 1.0, hz, 8, PALETTE.TRACER, 7, 0.35);
+  SFX.hit();
+  npc.hp--;
+  if (npc.hp <= 0 && !npc.wreck) killNpc(npc, credit);
+}
+
+function updateBullets(dt) {
+  for (const b of bullets) {
+    if (!b.active) continue;
+    b.prevX = b.x; b.prevZ = b.z;
+    b.x += b.vx * dt;
+    b.z += b.vz * dt;
+    b.life -= dt;
+    b.mesh.position.set(b.x + curveOffset(b.z), b.y, b.z);
+    b.mesh.rotation.y = Math.atan2(b.vx, b.vz) + Math.PI;
+
+    let dead = b.life <= 0;
+    if (!dead && b.owner === 'player') {
+      for (const npc of npcs) {
+        if (!npc.active || npc.wreck) continue;
+        // swept test: does this step's segment cross the car's z-band near its x?
+        const zLo = Math.min(b.prevZ, b.z), zHi = Math.max(b.prevZ, b.z);
+        if (zHi < npc.z - CONFIG.CAR_HALF_L || zLo > npc.z + CONFIG.CAR_HALF_L) continue;
+        const span = b.z - b.prevZ;
+        const tc = span !== 0 ? clamp((npc.z - b.prevZ) / span, 0, 1) : 0;
+        const bxAt = b.prevX + (b.x - b.prevX) * tc;
+        if (Math.abs(bxAt - npc.x) < CONFIG.CAR_HALF_W + 0.12) {
+          hitNpc(npc, bxAt, npc.z);
+          dead = true;
+          break;
+        }
+      }
+    } else if (!dead && b.owner === 'npc') {
+      const zLo = Math.min(b.prevZ, b.z), zHi = Math.max(b.prevZ, b.z);
+      if (zHi >= player.z - CONFIG.CAR_HALF_L && zLo <= player.z + CONFIG.CAR_HALF_L) {
+        const span = b.z - b.prevZ;
+        const tc = span !== 0 ? clamp((player.z - b.prevZ) / span, 0, 1) : 0;
+        const bxAt = b.prevX + (b.x - b.prevX) * tc;
+        if (Math.abs(bxAt - player.x) < CONFIG.CAR_HALF_W + 0.12) {
+          damagePlayer(CONFIG.ENEMY_BULLET_DMG);
+          spawnBurst(bxAt, 1.0, player.z, 8, PALETTE.ACCENT_PINK, 7, 0.35);
+          dead = true;
+        }
+      }
+      // collateral: enemy rounds hit other cars too (this is how feuds resolve)
+      if (!dead) {
+        for (const npc of npcs) {
+          if (!npc.active || npc.wreck || npc === b.shooter) continue;
+          if (zHi < npc.z - CONFIG.CAR_HALF_L || zLo > npc.z + CONFIG.CAR_HALF_L) continue;
+          const span = b.z - b.prevZ;
+          const tc = span !== 0 ? clamp((npc.z - b.prevZ) / span, 0, 1) : 0;
+          const bxAt = b.prevX + (b.x - b.prevX) * tc;
+          if (Math.abs(bxAt - npc.x) < CONFIG.CAR_HALF_W + 0.12) {
+            hitNpc(npc, bxAt, npc.z, false);             // no player credit
+            dead = true;
+            break;
+          }
+        }
+      }
+    }
+    if (dead) { b.active = false; b.mesh.visible = false; }
+  }
+}
+
+function damagePlayer(dmg) {
+  if (game.state !== 'RUNNING') return;
+  player.hp = Math.max(0, player.hp - dmg);
+  game.shake = Math.min(1, game.shake + 0.4);
+  SFX.hit();
+  if (player.hp <= 0) gameOver();
+}
+
+function updateCombat(dt) {
+  player.fireCooldown -= dt;
+  player.fireHeat = Math.max(0, player.fireHeat - dt);
+  player.invuln = Math.max(0, player.invuln - dt);
+
+  if (keys.has('Space') && player.fireCooldown <= 0 && game.state === 'RUNNING') {
+    player.fireCooldown = CONFIG.FIRE_COOLDOWN;
+    playerFire();
+  }
+
+  // muzzle flash decay (fast)
+  player.flash.material.opacity = Math.max(0, player.flash.material.opacity - 14 * dt);
+  player.flashLight.intensity = Math.max(0, player.flashLight.intensity - 160 * dt);
+
+  // ram collisions: player vs live npcs
+  if (player.invuln <= 0 && game.state === 'RUNNING') {
+    for (const npc of npcs) {
+      if (!npc.active) continue;
+      const dx = npc.x - player.x, dz = npc.z - player.z;
+      if (Math.abs(dx) < CONFIG.CAR_HALF_W * 2 && Math.abs(dz) < CONFIG.CAR_HALF_L * 2) {
+        const dmg = npc.archetype === 'bruiser' ? CONFIG.RAM_DAMAGE * 1.6 : CONFIG.RAM_DAMAGE;
+        player.invuln = CONFIG.RAM_INVULN;
+        player.vx = -Math.sign(dx || 1) * 9;          // kick apart
+        npc.x += Math.sign(dx || 1) * 1.4;
+        spawnBurst((npc.x + player.x) / 2, 0.8, (npc.z + player.z) / 2, 10, 0xE8DCC8, 6, 0.4);
+        if (!npc.wreck) hitNpc(npc, npc.x, npc.z);
+        damagePlayer(dmg);
+        break;
+      }
+    }
+  }
+}
+
+// ===================================================================
+// 12. DIRECTOR — difficulty ramp + spawner.
+// stages[] is the future-levels hook: one infinite stage for now.
+// ===================================================================
+const stages = [{
+  duration: Infinity,
+  params(d) {                       // every knob reads the single difficulty scalar
+    return {
+      spawnInterval: lerp(CONFIG.SPAWN_INTERVAL_0, CONFIG.SPAWN_INTERVAL_1, d),
+      maxEnemies: Math.round(lerp(CONFIG.MAX_ENEMIES_0, CONFIG.MAX_ENEMIES_1, d)),
+      enemyHp: lerp(CONFIG.ENEMY_HP_0, CONFIG.ENEMY_HP_1, d),
+      aimErr: lerp(CONFIG.AIM_ERR_0, CONFIG.AIM_ERR_1, d),
+      fireCd: lerp(CONFIG.FIRE_CD_0, CONFIG.FIRE_CD_1, d),
+      bruiserShare: lerp(CONFIG.BRUISER_SHARE_0, CONFIG.BRUISER_SHARE_1, d),
+      worldSpeed: lerp(CONFIG.WORLD_SPEED_0, CONFIG.WORLD_SPEED_1, d),
+    };
+  },
+}];
+
+const director = { spawnTimer: 1.5, trafficTimer: 2.0, feudTimer: 16, stage: null };
+
+function updateDirector(dt) {
+  game.time += dt;
+  game.difficulty = clamp(
+    1 - Math.exp(-game.time / CONFIG.RAMP_TAU) + game.kills * CONFIG.RAMP_KILL_BONUS,
+    CONFIG.RAMP_FLOOR, 1);
+  const stage = director.stage = stages[0].params(game.difficulty);
+  game.worldSpeed = damp(game.worldSpeed, stage.worldSpeed, 0.5, dt);
+
+  // enemies
+  director.spawnTimer -= dt;
+  if (director.spawnTimer <= 0) {
+    director.spawnTimer = stage.spawnInterval;
+    const liveEnemies = npcs.reduce((n, c) =>
+      n + (c.active && !c.wreck && c.archetype !== 'traffic' ? 1 : 0), 0);
+    if (liveEnemies < stage.maxEnemies) {
+      spawnEnemy(Math.random() < stage.bruiserShare ? 'bruiser' : 'gunner', stage);
+    }
+  }
+
+  // ambient traffic
+  director.trafficTimer -= dt;
+  if (director.trafficTimer <= 0) {
+    director.trafficTimer = CONFIG.TRAFFIC_INTERVAL;
+    const liveTraffic = npcs.reduce((n, c) =>
+      n + (c.active && !c.wreck && c.archetype === 'traffic' ? 1 : 0), 0);
+    if (liveTraffic < CONFIG.TRAFFIC_MAX) spawnTraffic();
+  }
+
+  // ambient feuds ahead — pure spectacle until the player closes in
+  director.feudTimer -= dt;
+  if (director.feudTimer <= 0) {
+    director.feudTimer = CONFIG.FEUD_INTERVAL;
+    if (game.difficulty > CONFIG.FEUD_MIN_DIFFICULTY) spawnFeud(stage);
+  }
+
+  // combo streak window
+  game.comboTimer = Math.max(0, game.comboTimer - dt);
+  if (game.comboTimer <= 0 && game.combo > 1) game.combo = 1;
+}
+
+function updatePlayer(dt) {
+  // lateral: arrows set a target velocity, position integrates with damping
+  let tx = 0;
+  if (keys.has('ArrowLeft')) tx -= CONFIG.PLAYER_LAT_SPEED;
+  if (keys.has('ArrowRight')) tx += CONFIG.PLAYER_LAT_SPEED;
+  player.vx = damp(player.vx, tx, CONFIG.PLAYER_LAT_DAMP, dt);
+  player.x = clamp(player.x + player.vx * dt, -CONFIG.PLAYER_X_MAX, CONFIG.PLAYER_X_MAX);
+  if (Math.abs(player.x) >= CONFIG.PLAYER_X_MAX) player.vx *= 0.3;
+
+  // longitudinal press: up = nose into the fog, down = drop back
+  let tz = 0;
+  if (keys.has('ArrowUp')) tz -= CONFIG.PLAYER_Z_SPEED;
+  if (keys.has('ArrowDown')) tz += CONFIG.PLAYER_Z_SPEED;
+  player.vz = damp(player.vz, tz, CONFIG.PLAYER_LAT_DAMP, dt);
+  player.z = clamp(player.z + player.vz * dt, CONFIG.PLAYER_Z_MIN, CONFIG.PLAYER_Z_MAX);
+
+  // visuals
+  const m = player.mesh;
+  m.position.set(player.x, 0, player.z);
+  m.rotation.z = -player.vx * 0.012;                  // bank
+  m.rotation.y = -player.vx * 0.018;                  // car is built facing -z; slight yaw
+  const spin = (game.worldSpeed - player.vz) / 0.38 * dt;
+  for (const w of m.userData.wheels) w.rotation.x -= spin;
+
+  // sun shadow frustum stays glued to the player
+  sun.position.set(player.x + 18, 26, player.z - 60);
+  sun.target.position.set(player.x, 0, player.z);
+}
+
+// ===================================================================
+// 11. FX — particles, driver lean, camera follow
+// ===================================================================
+const FX = { points: null, pos: null, vel: null, life: null, max: 0, cursor: 0 };
+
+function setupParticles() {
+  const n = CONFIG.PARTICLE_COUNT;
+  FX.max = n;
+  FX.pos = new Float32Array(n * 3);
+  FX.vel = new Float32Array(n * 3);
+  FX.life = new Float32Array(n);
+  const colors = new Float32Array(n * 3);
+  FX.pos.fill(0);
+  for (let i = 0; i < n; i++) FX.pos[i * 3 + 1] = -1000;   // parked underground
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(FX.pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  FX.colors = colors;
+  FX.points = new THREE.Points(geo, new THREE.PointsMaterial({
+    size: 0.22, vertexColors: true, transparent: true, depthWrite: false,
+  }));
+  FX.points.frustumCulled = false;
+  scene.add(FX.points);
+}
+
+function spawnBurst(x, y, z, count, colorHex, speed, life) {
+  _c1.setHex(colorHex);
+  for (let k = 0; k < count; k++) {
+    const i = FX.cursor;
+    FX.cursor = (FX.cursor + 1) % FX.max;
+    FX.pos[i * 3] = x; FX.pos[i * 3 + 1] = y; FX.pos[i * 3 + 2] = z;
+    const a = Math.random() * Math.PI * 2;
+    const up = Math.random() * 0.9 + 0.25;
+    const s = speed * (0.4 + Math.random() * 0.8);
+    FX.vel[i * 3] = Math.cos(a) * s * 0.7;
+    FX.vel[i * 3 + 1] = up * s * 0.6;
+    FX.vel[i * 3 + 2] = Math.sin(a) * s * 0.7;
+    FX.life[i] = life * (0.6 + Math.random() * 0.7);
+    FX.colors[i * 3] = _c1.r; FX.colors[i * 3 + 1] = _c1.g; FX.colors[i * 3 + 2] = _c1.b;
+  }
+  FX.points.geometry.attributes.color.needsUpdate = true;
+}
+
+function updateParticles(dt) {
+  const move = game.worldSpeed * dt;
+  let any = false;
+  for (let i = 0; i < FX.max; i++) {
+    if (FX.life[i] <= 0) continue;
+    any = true;
+    FX.life[i] -= dt;
+    if (FX.life[i] <= 0) { FX.pos[i * 3 + 1] = -1000; continue; }
+    FX.vel[i * 3 + 1] -= 14 * dt;                       // gravity
+    FX.pos[i * 3] += FX.vel[i * 3] * dt;
+    FX.pos[i * 3 + 1] = Math.max(0.04, FX.pos[i * 3 + 1] + FX.vel[i * 3 + 1] * dt);
+    FX.pos[i * 3 + 2] += FX.vel[i * 3 + 2] * dt + move; // sparks treadmill too
+  }
+  if (any) FX.points.geometry.attributes.position.needsUpdate = true;
+}
+
+function updateLean(dt) {
+  const target = player.fireHeat > 0 ? 1 : 0;
+  player.lean = damp(player.lean, target, 10, dt);
+  const d = player.driver;
+  const side = player.leanSide;
+  d.position.x = side * (0.38 + player.lean * 0.52);
+  d.position.y = 0.5 + player.lean * 0.34;              // rises as he leans out
+  d.rotation.z = -side * player.lean * 0.7;             // tip out the window
+  d.rotation.y = -side * player.lean * 0.18;            // shoulder turns down-road
+}
+
+let shakeT = 0;
+
+function updateCamera(dt) {
+  const targetX = player.x * 0.55;                    // lateral lag
+  camera.position.x = damp(camera.position.x, targetX, CONFIG.CAM_DAMP, dt);
+  camera.position.y = damp(camera.position.y, CONFIG.CAM_HEIGHT, CONFIG.CAM_DAMP, dt);
+  camera.position.z = damp(camera.position.z, player.z + CONFIG.CAM_BACK, CONFIG.CAM_DAMP, dt);
+
+  // FOV kick with world speed
+  const speedFrac = clamp((game.worldSpeed - CONFIG.WORLD_SPEED_0) /
+    (CONFIG.WORLD_SPEED_1 - CONFIG.WORLD_SPEED_0), 0, 1);
+  const portraitBonus = camera.aspect < 0.75 ? 9 : 0;   // tall screens see too little road
+  const fovTarget = CONFIG.CAM_FOV + portraitBonus + CONFIG.FOV_KICK * speedFrac;
+  if (Math.abs(camera.fov - fovTarget) > 0.02) {
+    camera.fov = damp(camera.fov, fovTarget, 1.5, dt);
+    camera.updateProjectionMatrix();
+  }
+
+  // shake: speed hum + hit impulses
+  game.shake = Math.max(0, game.shake - 2.2 * dt);
+  shakeT += dt * 30;
+  const amp = CONFIG.SHAKE_BASE * speedFrac + game.shake * 0.35;
+  camera.position.x += Math.sin(shakeT * 1.7) * amp * 0.6;
+  camera.position.y += Math.sin(shakeT * 2.3) * amp;
+
+  // look into the curve, lean the horizon slightly
+  const curveAhead = curveOffset(player.z - CONFIG.CAM_LOOK_AHEAD);
+  camera.lookAt(player.x * 0.85 + curveAhead * 0.7, 1.1, player.z - CONFIG.CAM_LOOK_AHEAD);
+  camera.rotateZ(-curveAhead * 0.01);
+}
+
+// --- speed lines: faint wind streaks past the camera at high speed ---
+const speedLines = [];
+let speedLineMat = null;
+
+function setupSpeedLines() {
+  const geo = new THREE.BoxGeometry(0.04, 0.04, 7);
+  speedLineMat = new THREE.MeshBasicMaterial({
+    color: 0xFFF2DC, transparent: true, opacity: 0, depthWrite: false,
+  });
+  for (let i = 0; i < CONFIG.SPEEDLINE_COUNT; i++) {
+    const mesh = new THREE.Mesh(geo, speedLineMat);
+    const s = {
+      mesh,
+      x: (Math.random() > 0.5 ? 1 : -1) * (4.8 + Math.random() * 2.2),
+      y: 2.6 + Math.random() * 2.6,
+      z: 10 - Math.random() * 160,
+    };
+    mesh.position.set(s.x, s.y, s.z);
+    scene.add(mesh);
+    speedLines.push(s);
+  }
+}
+
+function updateSpeedLines(dt) {
+  speedLineMat.opacity = clamp((game.worldSpeed - 42) / 10, 0, 1) * 0.45;
+  for (const s of speedLines) {
+    s.z += game.worldSpeed * 1.7 * dt;
+    if (s.z > camera.position.z + 4) {
+      s.z = -140 - Math.random() * 50;
+      s.x = (Math.random() > 0.5 ? 1 : -1) * (4.8 + Math.random() * 2.2);
+      s.y = 2.6 + Math.random() * 2.6;
+    }
+    s.mesh.position.set(s.x + curveOffset(s.z), s.y, s.z);
+  }
+}
+
+// ===================================================================
+// 13. HUD & SCREENS
+// ===================================================================
+const fpsEl = document.getElementById('fps');
+const titleEl = document.getElementById('title-screen');
+const scoreEl = document.getElementById('score');
+const distEl = document.getElementById('dist');
+const hpbarEl = document.getElementById('hpbar');
+let fpsFrames = 0, fpsTime = 0, hudTimer = 0;
+
+function updateFps(dt) {
+  fpsFrames++; fpsTime += dt;
+  if (fpsTime >= 0.5) {
+    fpsEl.textContent = `${Math.round(fpsFrames / fpsTime)} FPS`;
+    fpsFrames = 0; fpsTime = 0;
+  }
+}
+
+const threatL = document.getElementById('threat-l');
+const threatR = document.getElementById('threat-r');
+
+function updateHud(dt) {
+  hudTimer -= dt;
+  if (hudTimer > 0) return;
+  hudTimer = 0.1;                                       // 10 Hz, DOM stays cheap
+  const score = game.score + Math.floor(game.distance / 10);
+  scoreEl.textContent = `SCORE ${String(score).padStart(6, '0')}`;
+  distEl.textContent = `${(game.distance / 1000).toFixed(1)} KM · ${game.kills} KILLS`;
+  hpbarEl.style.width = `${(player.hp / CONFIG.PLAYER_HP) * 100}%`;
+
+  // threat edge arrows: enemy behind the camera (not yet visible)
+  let left = false, right = false;
+  for (const npc of npcs) {
+    if (!npc.active || npc.wreck || npc.archetype === 'traffic') continue;
+    if (npc.z > camera.position.z) {
+      if (npc.x < player.x) left = true; else right = true;
+    }
+  }
+  threatL.classList.toggle('on', left);
+  threatR.classList.toggle('on', right);
+}
+
+const comboEl = document.getElementById('combo');
+function showCombo(n) {
+  SFX.blip();
+  comboEl.textContent = `×${n} STREAK`;
+  comboEl.classList.remove('pop');
+  void comboEl.offsetWidth;                             // restart the CSS animation
+  comboEl.classList.add('pop');
+}
+
+// ===================================================================
+// 14. GAME STATE
+// ===================================================================
+const game = {
+  state: 'TITLE', kills: 0, distance: 0, time: 0,
+  worldSpeed: CONFIG.WORLD_SPEED_0, difficulty: 0,
+  score: 0, combo: 1, comboTimer: 0, shake: 0,
+};
+
+const deadEl = document.getElementById('dead-screen');
+const finalScoreEl = document.getElementById('final-score');
+
+function startGame() {
+  if (game.state !== 'TITLE') return;
+  game.state = 'RUNNING';
+  titleEl.classList.add('hidden');
+  renderer.domElement.focus();
+  audioInit();
+  if (SFX.ctx && SFX.ctx.state === 'suspended') SFX.ctx.resume();
+}
+titleEl.addEventListener('click', startGame);
+
+function gameOver() {
+  game.state = 'DEAD';
+  game.shake = 1;
+  const score = game.score + Math.floor(game.distance / 10);
+  finalScoreEl.textContent =
+    `SCORE ${score} · ${(game.distance / 1000).toFixed(1)} KM · ${game.kills} KILLS`;
+  // persistent best (per browser)
+  let best = { score: 0, dist: 0 };
+  try { best = JSON.parse(localStorage.getItem('desert-chase-best')) || best; } catch (e) { /* fresh */ }
+  const newBest = score > best.score;
+  if (newBest) {
+    best = { score, dist: game.distance };
+    try { localStorage.setItem('desert-chase-best', JSON.stringify(best)); } catch (e) { /* private mode */ }
+  }
+  document.getElementById('best-score').textContent = newBest
+    ? 'NEW BEST!'
+    : `BEST ${best.score} · ${(best.dist / 1000).toFixed(1)} KM`;
+  SFX.explode();
+  spawnBurst(player.x, 1.0, player.z, 40, 0xFF8C42, 11, 1.0);
+  spawnBurst(player.x, 1.2, player.z, 20, PALETTE.TRACER, 13, 0.6);
+  deadEl.classList.remove('hidden');
+}
+
+// restart without a page reload — the pooling-correctness test
+function restart() {
+  if (game.state !== 'DEAD') return;
+  for (const npc of npcs) releaseNpc(npc);
+  for (const b of bullets) { b.active = false; b.mesh.visible = false; }
+  for (let i = 0; i < FX.max; i++) { FX.life[i] = 0; FX.pos[i * 3 + 1] = -1000; }
+  FX.points.geometry.attributes.position.needsUpdate = true;
+
+  player.x = 0; player.z = 0; player.vx = 0; player.vz = 0;
+  player.hp = CONFIG.PLAYER_HP;
+  player.fireCooldown = 0; player.fireHeat = 0; player.lean = 0; player.invuln = 0;
+
+  game.kills = 0; game.distance = 0; game.time = 0;
+  game.difficulty = 0; game.worldSpeed = CONFIG.WORLD_SPEED_0;
+  game.score = 0; game.combo = 1; game.comboTimer = 0; game.shake = 0;
+  director.spawnTimer = 1.5; director.trafficTimer = 2.0; director.feudTimer = 16;
+
+  deadEl.classList.add('hidden');
+  game.state = 'RUNNING';
+  renderer.domElement.focus();
+}
+deadEl.addEventListener('click', restart);
+
+const pauseEl = document.getElementById('pause-screen');
+function togglePause() {
+  if (game.state === 'RUNNING') {
+    game.state = 'PAUSED';
+    pauseEl.classList.remove('hidden');
+    if (SFX.ctx) SFX.ctx.suspend();
+  } else if (game.state === 'PAUSED') {
+    game.state = 'RUNNING';
+    pauseEl.classList.add('hidden');
+    renderer.domElement.focus();
+    if (SFX.ctx) SFX.ctx.resume();
+  }
+}
+pauseEl.addEventListener('click', togglePause);
+
+// ===================================================================
+// 17. TOUCH — on-screen controls that feed the same `keys` Set.
+// Arrows bottom-right, FIRE bottom-left. Game logic never knows.
+// ===================================================================
+const touchUi = document.getElementById('touch-ui');
+const hudEl = document.getElementById('hud');
+
+function activateTouchUi() {
+  if (touchUi.classList.contains('active')) return;
+  touchUi.classList.add('active');
+  hudEl.classList.add('touch');
+  document.querySelector('#title-screen .start').textContent = 'TAP TO DRIVE';
+  // phones with weak GPUs: skip bloom from the start, the watchdog confirms later
+  if (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) post.enabled = false;
+}
+
+if (matchMedia('(pointer: coarse)').matches) activateTouchUi();
+window.addEventListener('touchstart', activateTouchUi, { once: true, passive: true });
+
+const TOUCH_MAP = {
+  'tb-up': 'ArrowUp', 'tb-down': 'ArrowDown',
+  'tb-left': 'ArrowLeft', 'tb-right': 'ArrowRight', 'tb-fire': 'Space',
+};
+for (const [id, code] of Object.entries(TOUCH_MAP)) {
+  const el = document.getElementById(id);
+  const press = (e) => {
+    e.preventDefault();
+    keys.add(code);
+    el.classList.add('held');
+    if (game.state === 'TITLE') startGame();
+    else if (game.state === 'DEAD' && code === 'Space') restart();
+  };
+  const release = () => {
+    keys.delete(code);
+    el.classList.remove('held');
+  };
+  el.addEventListener('pointerdown', press);
+  el.addEventListener('pointerup', release);
+  el.addEventListener('pointercancel', release);
+  el.addEventListener('contextmenu', (e) => e.preventDefault());  // long-press menu
+}
+document.getElementById('tb-pause').addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  togglePause();
+});
+
+// ===================================================================
+// 15. MAIN LOOP — fixed timestep with accumulator
+// ===================================================================
+let acc = 0;
+let last = performance.now();
+let hidden = false;
+
+document.addEventListener('visibilitychange', () => {
+  hidden = document.hidden;
+  if (!hidden) last = performance.now();   // don't replay the away-time
+  if (SFX.ctx && game.state === 'RUNNING') {
+    if (hidden) SFX.ctx.suspend(); else SFX.ctx.resume();
+  }
+});
+
+function update(dt) {
+  if (game.state === 'PAUSED') { pressed.clear(); return; }
+  updateWorld(dt);
+  updatePlayer(dt);
+  if (game.state === 'RUNNING') {
+    game.distance += game.worldSpeed * dt;
+    updateDirector(dt);
+    updateAI(dt, director.stage);
+  }
+  updateNpcs(dt);
+  updateCombat(dt);
+  updateBullets(dt);
+  updateParticles(dt);
+  updateSpeedLines(dt);
+  updateLean(dt);
+  pressed.clear();
+}
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (hidden && !window.DC_FORCE_RUN) return;
+  const frameDt = Math.min((now - last) / 1000, 0.1);
+  last = now;
+  acc += frameDt;
+  let n = 0;
+  while (acc >= CONFIG.STEP && n++ < CONFIG.MAX_STEPS) {
+    update(CONFIG.STEP);
+    acc -= CONFIG.STEP;
+  }
+  if (n >= CONFIG.MAX_STEPS) acc = 0;
+  updateCamera(frameDt);
+  updateFps(frameDt);
+  updateHud(frameDt);
+  updateAudio();
+  if (post.enabled && post.composer) post.composer.render();
+  else renderer.render(scene, camera);
+
+  // bloom watchdog: integrated GPUs get the plain pipeline
+  post.frameMs += frameDt * 1000;
+  post.frames++;
+  post.clock += frameDt;
+  if (post.clock >= 3) {
+    if (post.enabled && post.frameMs / post.frames > CONFIG.WATCHDOG_MS) post.enabled = false;
+    post.clock = 0; post.frameMs = 0; post.frames = 0;
+  }
+}
+
+// ===================================================================
+// 16. AUDIO — Web Audio procedural synth. No asset files.
+// Unlocks on first user gesture (autoplay policy).
+// ===================================================================
+const SFX = {
+  ctx: null, master: null, muted: false,
+  engineOsc: null, engineOsc2: null, engineGain: null,
+  noiseBuf: null,
+  nextBeat: 0, beatIdx: 0, padGain: null, padOscs: [],
+};
+
+// A-minor synthwave progression: Am – F – C – G (roots, Hz)
+const CHORDS = [
+  [110.00, 164.81],   // A2 + E3
+  [87.31, 130.81],    // F2 + C3
+  [130.81, 196.00],   // C3 + G3
+  [98.00, 146.83],    // G2 + D3
+];
+
+function audioInit() {
+  if (!CONFIG.AUDIO_ENABLED) return;     // sound is parked until the commander wants it
+  if (SFX.ctx) return;
+  try {
+    const ctx = SFX.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    SFX.master = ctx.createGain();
+    SFX.master.gain.value = 0.55;
+    SFX.master.connect(ctx.destination);
+
+    // white-noise buffer shared by shots/explosions
+    const len = ctx.sampleRate * 0.5;
+    SFX.noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = SFX.noiseBuf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+
+    // engine: two detuned saws → lowpass, pitch follows speed
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 320;
+    SFX.engineGain = ctx.createGain();
+    SFX.engineGain.gain.value = 0.05;
+    filter.connect(SFX.engineGain).connect(SFX.master);
+    for (const det of [0, 9]) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.value = 62;
+      osc.detune.value = det;
+      osc.connect(filter);
+      osc.start();
+      if (det === 0) SFX.engineOsc = osc; else SFX.engineOsc2 = osc;
+    }
+
+    // music pad: two saws per chord → slow lowpass
+    const padFilter = ctx.createBiquadFilter();
+    padFilter.type = 'lowpass';
+    padFilter.frequency.value = 700;
+    SFX.padGain = ctx.createGain();
+    SFX.padGain.gain.value = 0.045;
+    padFilter.connect(SFX.padGain).connect(SFX.master);
+    for (let i = 0; i < 2; i++) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.value = CHORDS[0][i];
+      osc.detune.value = i * 7 - 3;
+      osc.connect(padFilter);
+      osc.start();
+      SFX.padOscs.push(osc);
+    }
+    SFX.nextBeat = ctx.currentTime + 0.1;
+  } catch (e) { /* no audio — game plays silent */ }
+}
+
+function sfxBlast({ filterType = 'bandpass', freq = 1800, dur = 0.12, gain = 0.3, thump = 0 }) {
+  if (!SFX.ctx || SFX.muted) return;
+  const ctx = SFX.ctx, t = ctx.currentTime;
+  const src = ctx.createBufferSource();
+  src.buffer = SFX.noiseBuf;
+  const f = ctx.createBiquadFilter();
+  f.type = filterType;
+  f.frequency.value = freq;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(gain, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.connect(f).connect(g).connect(SFX.master);
+  src.start(t);
+  src.stop(t + dur + 0.05);
+  if (thump > 0) {
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(70, t);
+    o.frequency.exponentialRampToValueAtTime(28, t + thump);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.5, t);
+    og.gain.exponentialRampToValueAtTime(0.001, t + thump);
+    o.connect(og).connect(SFX.master);
+    o.start(t);
+    o.stop(t + thump + 0.05);
+  }
+}
+
+SFX.shoot = (far = false) => sfxBlast({ freq: 1700, dur: far ? 0.08 : 0.13, gain: far ? 0.12 : 0.3 });
+SFX.explode = () => sfxBlast({ filterType: 'lowpass', freq: 380, dur: 0.8, gain: 0.55, thump: 0.4 });
+SFX.hit = () => sfxBlast({ freq: 2600, dur: 0.05, gain: 0.16 });
+SFX.blip = () => {
+  if (!SFX.ctx || SFX.muted) return;
+  const ctx = SFX.ctx, t = ctx.currentTime;
+  const o = ctx.createOscillator();
+  o.type = 'square';
+  o.frequency.value = 540;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.12, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+  o.connect(g).connect(SFX.master);
+  o.start(t); o.stop(t + 0.1);
+};
+
+function updateAudio() {
+  if (!SFX.ctx || SFX.ctx.state !== 'running') return;
+  // engine pitch follows world speed + player forward press
+  const f = 50 + (game.worldSpeed - 36) * 3.2 - player.vz * 2;
+  SFX.engineOsc.frequency.setTargetAtTime(f, SFX.ctx.currentTime, 0.08);
+  SFX.engineOsc2.frequency.setTargetAtTime(f * 1.005, SFX.ctx.currentTime, 0.08);
+
+  // bassline scheduler: eighth notes at 100 bpm, chord changes every 2 bars
+  const SPB = 60 / 100 / 2;                 // s per eighth
+  while (SFX.nextBeat < SFX.ctx.currentTime + 0.3) {
+    const chord = CHORDS[Math.floor(SFX.beatIdx / 16) % CHORDS.length];
+    // pad follows the chord
+    if (SFX.beatIdx % 16 === 0) {
+      SFX.padOscs[0].frequency.setTargetAtTime(chord[0], SFX.nextBeat, 0.2);
+      SFX.padOscs[1].frequency.setTargetAtTime(chord[1], SFX.nextBeat, 0.2);
+    }
+    if (!SFX.muted) {
+      const o = SFX.ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = chord[0] / 2 * (SFX.beatIdx % 8 === 6 ? 1.5 : 1);
+      const g = SFX.ctx.createGain();
+      g.gain.setValueAtTime(0.10, SFX.nextBeat);
+      g.gain.exponentialRampToValueAtTime(0.001, SFX.nextBeat + SPB * 0.85);
+      const lf = SFX.ctx.createBiquadFilter();
+      lf.type = 'lowpass';
+      lf.frequency.value = 500;
+      o.connect(lf).connect(g).connect(SFX.master);
+      o.start(SFX.nextBeat);
+      o.stop(SFX.nextBeat + SPB);
+    }
+    SFX.nextBeat += SPB;
+    SFX.beatIdx++;
+  }
+}
+
+function toggleMute() {
+  SFX.muted = !SFX.muted;
+  if (SFX.master) SFX.master.gain.value = SFX.muted ? 0 : 0.55;
+}
+
+// ===================================================================
+// BOOTSTRAP
+// ===================================================================
+try {
+  setupWorld();
+  setupPlayer();
+  setupNpcs();
+  setupBullets();
+  setupParticles();
+  setupSpeedLines();
+  setupPost();
+  // debug/test handle (harmless in prod; used by automated verification)
+  window.DC = {
+    scene, camera, player, world, game, CONFIG, keys, npcs, bullets, director, post,
+    // manual sim stepper: lets automated tests advance the game in a hidden tab
+    step(n = 1) { for (let i = 0; i < n; i++) update(CONFIG.STEP); },
+    render() {
+      updateCamera(CONFIG.STEP);
+      if (post.enabled && post.composer) post.composer.render();
+      else renderer.render(scene, camera);
+    },
+  };
+  requestAnimationFrame(frame);
+} catch (err) {
+  console.error(err);
+  document.getElementById('err').style.display = 'flex';
+}
+</script>
+<script>
+  // CDN failure fallback — module scripts fail silently on import errors
+  window.addEventListener('error', (e) => {
+    if (e.message && /import|module|three/i.test(e.message)) {
+      document.getElementById('err').style.display = 'flex';
+    }
+  }, true);
+</script>
+</body>
+</html>
